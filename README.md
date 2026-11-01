@@ -100,7 +100,7 @@ cd LiteBrawl
 mvn -B package
 ```
 
-产物：`target/LiteBrawl-1.0.2-Release.jar`。
+产物：`target/LiteBrawl-1.0.3-Release.jar`。
 SQLite 与 MySQL 驱动已经 shade 进包里，服务器上不需要额外装依赖。
 
 ### 部署

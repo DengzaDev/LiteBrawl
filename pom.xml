@@ -6,7 +6,7 @@
 
     <groupId>com.litebrawl</groupId>
     <artifactId>LiteBrawl</artifactId>
-    <version>1.0.2-Release</version>
+    <version>1.0.3-Release</version>
     <packaging>jar</packaging>
     <name>LiteBrawl</name>
     <description>Small-scale brawl minigame for Paper 1.21.1</description>
