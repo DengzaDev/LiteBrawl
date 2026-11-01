@@ -582,6 +582,10 @@ web:
 storage:
   type: SQLITE
   save-interval-seconds: 300
+  # 周期榜（日/周/月/年）历史数据保留多少天；0 = 永不清理
+  # 只删过期的历史周期，当前正在累积的那一期不会被删
+  # 日榜每期每个玩家一行，不清理的话表会一直变大
+  period-retention-days: 180
   mysql:
     host: 127.0.0.1
     port: 3306

@@ -171,6 +171,7 @@ public final class LiteBrawlPlugin extends JavaPlugin {
         tab.start();
         display.start();
         startWeb();
+        startPeriodCleanup();
         boost.start();
         bottles.start();
         mobCleanup.start();
@@ -184,6 +185,28 @@ public final class LiteBrawlPlugin extends JavaPlugin {
         if (firstInstall) {
             printFirstRunGuide();
         }
+    }
+
+    /**
+     * 周期榜数据定期清理：日 / 周 / 月 / 年榜每期每个玩家一行，不清理就会无限膨胀。
+     *
+     * <p>启动时先异步清一次，之后每 6 小时一次。保留天数每次现读配置，
+     * 所以 {@code /litebrawl reload} 改完立即生效；设为 0 表示不清理。</p>
+     */
+    private void startPeriodCleanup() {
+        Runnable purge = () -> {
+            int keepDays = settings.periodRetentionDays();
+            if (keepDays <= 0) {
+                return;
+            }
+            int removed = storage.purgeOldPeriods(keepDays);
+            if (removed > 0) {
+                getLogger().info("已清理 " + removed + " 条过期的周期榜数据（保留最近 " + keepDays + " 天）");
+            }
+        };
+        getServer().getScheduler().runTaskAsynchronously(this, purge);
+        long ticks = 6L * 60 * 60 * 20;
+        getServer().getScheduler().runTaskTimerAsynchronously(this, purge, ticks, ticks);
     }
 
     /** 网页配置服务：首次启动自动生成 token，并在本机尝试打开浏览器。 */

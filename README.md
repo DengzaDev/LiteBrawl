@@ -549,6 +549,11 @@ settings    VARCHAR(512) NOT NULL DEFAULT ''    -- 个人开关
 周期榜（日 / 周 / 月 / 年）单独一张 `litebrawl_profiles_period` 表，按 `period_key` 分区，
 不会污染总榜数据。
 
+周期数据会不断累积，插件**每 6 小时自动清理一次**结束时间超过
+`storage.period-retention-days`（默认 180 天）的历史周期；判断用的是周期的**结束**时间，
+所以当前正在累积的那一期永远保留（年榜不会在年中把自己删掉）。设为 `0` 关闭清理，
+`/litebrawl status` 能看到当前生效的保留天数。
+
 ## 跨服
 
 当前默认 `proxy.mode: NONE`，即单服运行。跨服跳转已经实现 Bungee 插件消息通道：

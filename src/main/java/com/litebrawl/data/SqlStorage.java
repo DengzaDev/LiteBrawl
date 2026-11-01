@@ -11,6 +11,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -145,6 +149,91 @@ public final class SqlStorage implements Storage {
                 + "PRIMARY KEY (uuid, period_key))";
         try (Statement st = connection.createStatement()) {
             st.executeUpdate(ddl);
+        }
+    }
+
+    /**
+     * 删除结束时间早于「今天 - keepDays」的历史周期数据。
+     *
+     * <p>周期键形如 {@code d:2026-11-01} / {@code w:2026-W44} / {@code m:2026-11} / {@code y:2026}，
+     * 统一换算成该周期的**结束日期**再比较，所以一条规则就能覆盖四种粒度。</p>
+     *
+     * <p>用结束日期而不是起始日期：年榜起始是 1 月 1 日，按起始算会在年中就把
+     * **当前这一年的年榜**判成过期删掉；按结束算，正在累积的那一期一定还没结束，不会被删。</p>
+     *
+     * @return 实际删除的行数；keepDays &lt;= 0 时直接返回 0（表示不清理）
+     */
+    public synchronized int purgeOldPeriods(int keepDays) {
+        if (keepDays <= 0) {
+            return 0;
+        }
+        LocalDate cutoff = LocalDate.now().minusDays(keepDays);
+        List<String> expired = new ArrayList<>();
+        try {
+            ensureOpen();
+            try (Statement st = connection.createStatement();
+                 ResultSet rs = st.executeQuery("SELECT DISTINCT period_key FROM " + periodTable)) {
+                while (rs.next()) {
+                    String key = rs.getString(1);
+                    LocalDate end = periodEnd(key);
+                    // 解析不出来的键一律保留，宁可留着也不要误删
+                    if (end != null && end.isBefore(cutoff)) {
+                        expired.add(key);
+                    }
+                }
+            }
+            if (expired.isEmpty()) {
+                return 0;
+            }
+            int removed = 0;
+            try (PreparedStatement ps = connection.prepareStatement(
+                    "DELETE FROM " + periodTable + " WHERE period_key = ?")) {
+                for (String key : expired) {
+                    ps.setString(1, key);
+                    removed += ps.executeUpdate();
+                }
+            }
+            return removed;
+        } catch (SQLException e) {
+            plugin.getLogger().warning("清理周期榜数据失败: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    /** 把周期键换算成该周期的结束日期；无法识别返回 null。 */
+    static LocalDate periodEnd(String key) {
+        if (key == null || key.length() < 3) {
+            return null;
+        }
+        try {
+            String prefix = key.substring(0, 2);
+            String body = key.substring(2);
+            switch (prefix) {
+                case "d:":
+                    return LocalDate.parse(body, DateTimeFormatter.ISO_LOCAL_DATE);
+                case "w:": {
+                    int idx = body.indexOf("-W");
+                    if (idx <= 0) {
+                        return null;
+                    }
+                    int year = Integer.parseInt(body.substring(0, idx));
+                    int week = Integer.parseInt(body.substring(idx + 2));
+                    WeekFields wf = WeekFields.ISO;
+                    // 1 月 4 日必定落在第 1 周，用它当锚点定位到该周周一，加 6 天到周日
+                    return LocalDate.of(year, 1, 4)
+                            .with(wf.weekOfWeekBasedYear(), week)
+                            .with(wf.dayOfWeek(), 1)
+                            .plusDays(6);
+                }
+                case "m:":
+                    return YearMonth.parse(body).atEndOfMonth();
+                case "y:":
+                    return LocalDate.of(Integer.parseInt(body), 12, 31);
+                default:
+                    return null;
+            }
+        } catch (RuntimeException e) {
+            return null;
         }
     }
 

@@ -211,6 +211,8 @@ public final class Settings {
     private String mysqlTable = "litebrawl_profiles";
     private boolean mysqlUseSsl = false;
     private int storageSaveInterval = 300;
+    /** 周期榜历史数据保留天数；0 = 永不清理。 */
+    private int periodRetentionDays = 180;
 
     private boolean antiFarmEnabled = true;
     private int antiFarmWindowSeconds = 600;
@@ -427,6 +429,7 @@ public final class Settings {
 
         storageType = c.getString("storage.type", "SQLITE").trim().toUpperCase(Locale.ROOT);
         storageSaveInterval = Math.max(30, c.getInt("storage.save-interval-seconds", 300));
+        periodRetentionDays = Math.max(0, c.getInt("storage.period-retention-days", 180));
         mysqlHost = c.getString("storage.mysql.host", mysqlHost);
         mysqlPort = c.getInt("storage.mysql.port", 3306);
         mysqlDatabase = c.getString("storage.mysql.database", mysqlDatabase);
@@ -1278,6 +1281,10 @@ public final class Settings {
 
     public int storageSaveInterval() {
         return storageSaveInterval;
+    }
+
+    public int periodRetentionDays() {
+        return periodRetentionDays;
     }
 
     public String proxyMode() {

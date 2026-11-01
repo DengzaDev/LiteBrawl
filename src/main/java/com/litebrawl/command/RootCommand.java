@@ -612,6 +612,11 @@ public final class RootCommand implements CommandExecutor, TabCompleter {
                         ? active.world().getDifficulty().name() : "-") + "</white></gray>"
                         + "<newline><gray>热更新：<white>" + hotfixes + "</white> 个，加成：<white>"
                         + boosts + "</white> 项</gray>"
+                        + "<newline><gray>周期数据保留：<white>"
+                        + (plugin.settings().periodRetentionDays() <= 0
+                        ? "不清理"
+                        : plugin.settings().periodRetentionDays() + " 天")
+                        + "</white></gray>"
                         + "<newline><gray>TPS：<white>"
                         + String.format(Locale.ROOT, "%.1f", Bukkit.getTPS()[0]) + "</white></gray>");
     }

@@ -26,6 +26,14 @@ public interface Storage extends AutoCloseable {
     /** 按周期取榜（periodKey 见 {@link Period#key()}）。 */
     List<Profile> topPeriod(String periodKey, String column, int limit);
 
+    /**
+     * 删除过期的历史周期数据，防止周期表无限膨胀。
+     *
+     * @param keepDays 保留最近多少天；&lt;= 0 表示不清理
+     * @return 实际删除的行数
+     */
+    int purgeOldPeriods(int keepDays);
+
     @Override
     void close() throws Exception;
 

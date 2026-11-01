@@ -86,6 +86,9 @@ public final class WebConfigServer {
         server.setExecutor(null);
         server.start();
         plugin.getLogger().info("网页管理已启动: " + url());
+        // 绑定码 5 分钟、玩家令牌 12 小时，过期后只要没人再访问就永远留在内存里；
+        // 每分钟扫一次，避免长服上这两个表只增不减。
+        plugin.getServer().getScheduler().runTaskTimer(plugin, this::purgeExpired, 20L * 60, 20L * 60);
     }
 
     /** 允许网页编辑的配置文件白名单。 */
@@ -100,8 +103,26 @@ public final class WebConfigServer {
     private final Map<String, UUID> playerTokens = new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<String, Long> playerTokenExpiry = new java.util.concurrent.ConcurrentHashMap<>();
 
-    public void stop() {
-        if (server != null) {
+    /**
+     * 清理过期的绑定码与玩家令牌。
+     *
+     * <p>这两个表平时只在「被使用」时才删条目，没人用的过期项会一直留着，
+     * 长服就是缓慢的内存增长，所以由定时任务每分钟扫一遍。</p>
+     */
+    public void purgeExpired() {
+        long now = System.currentTimeMillis();
+        int before = linkCodes.size() + playerTokens.size();
+        linkExpiry.entrySet().removeIf(entry -> entry.getValue() < now);
+        linkCodes.keySet().removeIf(code -> !linkExpiry.containsKey(code));
+        playerTokenExpiry.entrySet().removeIf(entry -> entry.getValue() < now);
+        playerTokens.keySet().removeIf(token -> !playerTokenExpiry.containsKey(token));
+        int removed = before - (linkCodes.size() + playerTokens.size());
+        if (removed > 0) {
+            plugin.getLogger().info("清理了 " + removed + " 条过期的网页绑定码/令牌");
+        }
+    }
+
+    public void stop() {        if (server != null) {
             server.stop(0);
             server = null;
         }
@@ -193,6 +214,15 @@ public final class WebConfigServer {
 
     // ---------------- 配置读写 ----------------
 
+    /** 敏感配置项在网页上一律显示成这个；页面把这个值提交回来表示「不要改」。 */
+    private static final String SECRET_MASK = "***";
+
+    /** 不该明文回显的键：数据库密码、网页 token、代理密钥等。 */
+    private static boolean isSecretKey(String key) {
+        String k = key.toLowerCase(Locale.ROOT);
+        return k.contains("password") || k.endsWith(".token") || k.contains("secret");
+    }
+
     private void handleConfigFlat(HttpExchange exchange) throws IOException {
         if (!authorized(exchange)) {
             unauthorized(exchange);
@@ -215,7 +245,10 @@ public final class WebConfigServer {
                 }
                 first = false;
                 sb.append(q(key)).append(':');
-                if (value instanceof Number || value instanceof Boolean) {
+                if (isSecretKey(key)) {
+                    // 密码 / token 只回显掩码，避免截图、录屏、共享屏幕时泄露
+                    sb.append(q(SECRET_MASK));
+                } else if (value instanceof Number || value instanceof Boolean) {
                     sb.append(value);
                 } else if (value instanceof List<?> list) {
                     sb.append('[');
@@ -249,10 +282,16 @@ public final class WebConfigServer {
         Map<String, String> values = parseForm(body);
         String result = callSync(() -> {
             int applied = 0;
+            int skipped = 0;
             var config = plugin.getConfig();
             for (var entry : values.entrySet()) {
                 String path = entry.getKey();
                 String raw = entry.getValue();
+                if (SECRET_MASK.equals(raw)) {
+                    // 页面没改这一项，保持数据库密码 / token 原值，不能被掩码覆盖
+                    skipped++;
+                    continue;
+                }
                 Object current = config.get(path);
                 try {
                     if (current instanceof Boolean) {
@@ -281,7 +320,8 @@ public final class WebConfigServer {
             }
             plugin.saveConfig();
             plugin.reload();
-            return applied + " 项已保存";
+            return applied + " 项已保存"
+                    + (skipped > 0 ? "（" + skipped + " 项敏感字段保持不变）" : "");
         });
         send(exchange, 200, "text/plain; charset=utf-8", result == null ? "超时" : result);
     }
