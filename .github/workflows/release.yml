@@ -40,12 +40,29 @@ jobs:
           zip -q -r "$GITHUB_WORKSPACE/target/LiteBrawl-$RELEASE_TAG.hotfix" hotfix.yml
           ls -l "$GITHUB_WORKSPACE/target"
 
+      - name: 提取当前版本的更新说明
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          # CHANGELOG 里每节以 "## <版本>" 开头；只截取当前版本那一节，
+          # 否则 Release 页面会把所有历史版本一起搬上去。
+          awk -v ver="$VERSION" '
+            BEGIN { pat = "^## " ver "([^0-9]|$)" }
+            $0 ~ pat { flag = 1; print; next }
+            flag && /^## / { exit }
+            flag { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::warning::CHANGELOG.md 里找不到 ## ${VERSION}，退回使用整份文件"
+            cp CHANGELOG.md release-notes.md
+          fi
+          echo "本次 Release 说明：$(wc -l < release-notes.md) 行"
+
       - name: 发布 Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: LiteBrawl ${{ env.RELEASE_TAG }}
-          body_path: CHANGELOG.md
+          body_path: release-notes.md
           files: |
             target/LiteBrawl-*.jar
             target/*.hotfix
