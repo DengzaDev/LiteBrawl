@@ -576,6 +576,18 @@ web:
   # 首次启动是否自动打开浏览器
   open-browser: true
 
+# ---------------- 自动备份 ----------------
+# 把所有配置文件和数据库打成 zip 放到 plugins/LiteBrawl/backups/
+# 改完配置后悔了、误删了数据，都能从备份里捞回来
+backup:
+  enabled: true
+  # 每隔多少小时备份一次；0 = 不自动备份（仍可用 /lb backup now 手动备份）
+  interval-hours: 24
+  # 最多保留几份，超出的按时间从旧到新删除；0 = 不清理
+  keep: 10
+  # 是否把数据库一起备份（SQLite 用 VACUUM INTO 导出一致副本；MySQL 会自动跳过）
+  include-database: true
+
 # ---------------- 数据存储 ----------------
 # type: SQLITE 或 MYSQL
 # 切换存储类型需要重启服务器

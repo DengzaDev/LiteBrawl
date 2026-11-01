@@ -6,7 +6,7 @@
 
     <groupId>com.litebrawl</groupId>
     <artifactId>LiteBrawl</artifactId>
-    <version>1.0.1-Release</version>
+    <version>1.0.2-Release</version>
     <packaging>jar</packaging>
     <name>LiteBrawl</name>
     <description>Small-scale brawl minigame for Paper 1.21.1</description>
@@ -58,6 +58,14 @@
             <artifactId>mysql-connector-j</artifactId>
             <version>9.1.0</version>
         </dependency>
+
+        <!-- 单元测试：只覆盖不依赖服务端运行时的纯逻辑（周期键、序列化、占位符替换） -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -83,6 +91,11 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -7,6 +7,8 @@
 [![Paper](https://img.shields.io/badge/Paper-1.21.1-blue.svg)](https://papermc.io)
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://adoptium.net)
 
+> [English](README.en.md) · 中文
+
 小型「随机出生点大乱斗」插件，为 **Paper 1.21.1 / Java 21** 编写。
 
 玩家点一下就开始，随机丢到地图里一颗绿宝石块上，人人同一套铁装、4 支会自动补充的箭，
@@ -98,7 +100,7 @@ cd LiteBrawl
 mvn -B package
 ```
 
-产物：`target/LiteBrawl-1.0.1-Release.jar`。
+产物：`target/LiteBrawl-1.0.2-Release.jar`。
 SQLite 与 MySQL 驱动已经 shade 进包里，服务器上不需要额外装依赖。
 
 ### 部署
@@ -185,6 +187,7 @@ SQLite 与 MySQL 驱动已经 shade 进包里，服务器上不需要额外装�
 | `/litebrawl exp give\|take\|set <玩家> <数量>` | 调整经验 |
 | `/litebrawl status` | 一次性看清服务端状态（排查用） |
 | `/litebrawl link <玩家名>` | 替玩家代发网页绑定码（离线也行） |
+| `/litebrawl backup now\|list` | 完整备份（配置 + 数据库）/ 查看已有备份 |
 | `/lb bot spawn [数量]` / `clear` / `count` | 手动控制陪练假人 |
 | `/lb npc set <shop\|cosmetic\|board>` | 在脚下创建功能 NPC |
 | `/lb npc move` / `remove` / `name <名字>` / `skin <玩家>` / `list` | 操作最近的 NPC |
@@ -553,6 +556,21 @@ settings    VARCHAR(512) NOT NULL DEFAULT ''    -- 个人开关
 `storage.period-retention-days`（默认 180 天）的历史周期；判断用的是周期的**结束**时间，
 所以当前正在累积的那一期永远保留（年榜不会在年中把自己删掉）。设为 `0` 关闭清理，
 `/litebrawl status` 能看到当前生效的保留天数。
+
+### 自动备份
+
+```yaml
+backup:
+  enabled: true
+  interval-hours: 24    # 每 24 小时一次；0 = 只手动备份
+  keep: 10              # 只保留最近 10 份
+  include-database: true
+```
+
+备份打到 `plugins/LiteBrawl/backups/` 下的 zip，内容是 6 个配置文件 + 数据库快照。
+数据库用 SQLite 的 `VACUUM INTO` 导出，**服务器运行中也能拿到一致的副本**，
+不需要停服。手动 `/litebrawl backup now`，查看 `/litebrawl backup list`。
+MySQL 模式不会导出数据库（进程内无法安全导出），需要的话请用 `mysqldump`。
 
 ## 跨服
 

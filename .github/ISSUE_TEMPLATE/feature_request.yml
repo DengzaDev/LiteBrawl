@@ -1,0 +1,55 @@
+name: 功能建议
+description: 想要新玩法、新配置项，或者觉得哪里可以做得更好
+labels: [ enhancement ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢提建议！说清楚「你想做什么」和「为什么」就够了，不需要写实现方案。
+
+  - type: textarea
+    id: what
+    attributes:
+      label: 你希望加什么
+      description: 一句话说清想要的功能。
+      placeholder: 希望换图时弹一个上一局的结算面板，显示击杀最多的前三名
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: 为什么需要它
+      description: 说清使用场景，比「感觉很酷」有用得多。
+      placeholder: 现在换图只是把人踢回大厅，玩家不知道自己上一局打得怎么样，没有成就感
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 属于哪一类
+      options:
+        - 玩法（出生点、装备、箭袋、即死方块）
+        - 经济与排行（硬币、经验、赏金、榜单）
+        - 社交与外观（组队、复活保护、外观、名字）
+        - 运营工具（多地图、假人、NPC、加成、热更新）
+        - 网页控制台 / 玩家面板
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 插件版本
+      description: `/litebrawl status` 里能看到，或者看 jar 文件名。
+      placeholder: 1.0.2-Release
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认
+      options:
+        - label: 我搜过已有 issue，没有重复的建议
+          required: true

@@ -75,6 +75,7 @@ public final class RootCommand implements CommandExecutor, TabCompleter {
             case "status" -> status(sender);
             case "link" -> linkAdmin(sender, args);
             case "bot" -> bot(sender, args);
+            case "backup" -> backup(sender, args);
             default -> help(sender);
         }
     }
@@ -91,6 +92,7 @@ public final class RootCommand implements CommandExecutor, TabCompleter {
                 + "<newline><white>/litebrawl coins|exp give|take|set <玩家> <数量></white>"
                 + "<newline><white>/litebrawl reload</white> <dark_gray>重载配置</dark_gray>"
                 + "<newline><white>/litebrawl link <玩家名></white> <dark_gray>替玩家发网页面板绑定码</dark_gray>"
+                + "<newline><white>/litebrawl backup <now|list></white> <dark_gray>完整备份（配置 + 数据库）</dark_gray>"
                 + "<newline><white>/shop</white> <white>/stats</white> <white>/top</white> <white>/sb</white>");
     }
 
@@ -1047,6 +1049,35 @@ public final class RootCommand implements CommandExecutor, TabCompleter {
             }
             default -> msg(sender, "<red>未知子命令。</red>");
         }
+    }
+
+    /** /litebrawl backup [now|list]：完整备份（配置 + 数据库）。 */
+    private void backup(CommandSender sender, String[] args) {
+        String sub = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "now";
+        if (sub.equals("list")) {
+            var list = plugin.backups().list();
+            if (list.isEmpty()) {
+                msg(sender, "<gray>还没有备份。用 <white>/lb backup now</white> 生成一份。</gray>");
+                return;
+            }
+            StringBuilder builder = new StringBuilder("<gray>—— 备份列表（新→旧）——</gray>");
+            for (String line : list) {
+                builder.append("<newline><white>").append(line).append("</white>");
+            }
+            msg(sender, builder.toString());
+            return;
+        }
+        if (!sub.equals("now")) {
+            msg(sender, "<gray>/lb backup <now|list></gray>");
+            return;
+        }
+        msg(sender, "<gray>正在备份…</gray>");
+        // 备份是纯 IO，放异步；结果再切回主线程发给玩家
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            String result = plugin.backups().create("手动");
+            plugin.getServer().getScheduler().runTask(plugin,
+                    () -> msg(sender, "<green>%result%</green>", "result", result));
+        });
     }
 
     private void bot(CommandSender sender, String[] args) {

@@ -237,6 +237,32 @@ public final class SqlStorage implements Storage {
         }
     }
 
+    /**
+     * 备份：SQLite 用 {@code VACUUM INTO} 导出一份一致的副本（运行中也安全）；
+     * MySQL 无法在进程内安全导出，返回 false 由调用方说明。
+     */
+    @Override
+    public synchronized boolean backupTo(File target) {
+        if (mysql || target == null) {
+            return false;
+        }
+        if (target.exists() && !target.delete()) {
+            return false;
+        }
+        try {
+            ensureOpen();
+            // VACUUM INTO 的目标必须不存在；路径里的单引号需要转义
+            String path = target.getAbsolutePath().replace("'", "''");
+            try (Statement st = connection.createStatement()) {
+                st.executeUpdate("VACUUM INTO '" + path + "'");
+            }
+            return target.exists();
+        } catch (SQLException e) {
+            plugin.getLogger().warning("导出数据库快照失败: " + e.getMessage());
+            return false;
+        }
+    }
+
     private void ensureOpen() throws SQLException {
         if (connection == null || connection.isClosed()) {
             try {

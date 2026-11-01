@@ -3,6 +3,7 @@ package com.litebrawl;
 import com.litebrawl.board.BoardPanelGui;
 import com.litebrawl.board.BoardService;
 import com.litebrawl.boost.BoostService;
+import com.litebrawl.backup.BackupService;
 import com.litebrawl.bot.BotService;
 import com.litebrawl.chat.MessageService;
 import com.litebrawl.cosmetic.CosmeticGui;
@@ -94,6 +95,7 @@ public final class LiteBrawlPlugin extends JavaPlugin {
     private PersonalGui personalGui;
     private ShopService shop;
     private BoardService boards;
+    private BackupService backups;
     private BoardPanelGui boardPanel;
     private ScoreboardService sidebar;
 
@@ -149,6 +151,7 @@ public final class LiteBrawlPlugin extends JavaPlugin {
         this.shop = new ShopService(this);
         this.boards = new BoardService(this);
         this.boardPanel = new BoardPanelGui(this);
+        this.backups = new BackupService(this);
         this.sidebar = new ScoreboardService(this);
 
         maps.load();
@@ -172,6 +175,7 @@ public final class LiteBrawlPlugin extends JavaPlugin {
         display.start();
         startWeb();
         startPeriodCleanup();
+        backups.start();
         boost.start();
         bottles.start();
         mobCleanup.start();
@@ -292,6 +296,9 @@ public final class LiteBrawlPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (backups != null) {
+            backups.stop();
+        }
         if (tab != null) {
             tab.stop();
         }
@@ -549,6 +556,10 @@ public final class LiteBrawlPlugin extends JavaPlugin {
 
     public DisplayService display() {
         return display;
+    }
+
+    public BackupService backups() {
+        return backups;
     }
 
     public BoostService boost() {

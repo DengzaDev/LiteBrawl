@@ -34,6 +34,13 @@ public interface Storage extends AutoCloseable {
      */
     int purgeOldPeriods(int keepDays);
 
+    /**
+     * 把数据库导出到指定文件（供备份使用）。
+     *
+     * @return 成功返回 true；不支持或失败返回 false
+     */
+    boolean backupTo(java.io.File target);
+
     @Override
     void close() throws Exception;
 

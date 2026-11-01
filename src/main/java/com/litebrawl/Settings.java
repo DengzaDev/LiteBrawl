@@ -213,6 +213,11 @@ public final class Settings {
     private int storageSaveInterval = 300;
     /** 周期榜历史数据保留天数；0 = 永不清理。 */
     private int periodRetentionDays = 180;
+    /** 自动备份开关、间隔（小时）、保留份数、是否包含数据库。 */
+    private boolean backupEnabled = true;
+    private int backupIntervalHours = 24;
+    private int backupKeep = 10;
+    private boolean backupIncludeDatabase = true;
 
     private boolean antiFarmEnabled = true;
     private int antiFarmWindowSeconds = 600;
@@ -430,6 +435,10 @@ public final class Settings {
         storageType = c.getString("storage.type", "SQLITE").trim().toUpperCase(Locale.ROOT);
         storageSaveInterval = Math.max(30, c.getInt("storage.save-interval-seconds", 300));
         periodRetentionDays = Math.max(0, c.getInt("storage.period-retention-days", 180));
+        backupEnabled = c.getBoolean("backup.enabled", true);
+        backupIntervalHours = Math.max(0, c.getInt("backup.interval-hours", 24));
+        backupKeep = Math.max(0, c.getInt("backup.keep", 10));
+        backupIncludeDatabase = c.getBoolean("backup.include-database", true);
         mysqlHost = c.getString("storage.mysql.host", mysqlHost);
         mysqlPort = c.getInt("storage.mysql.port", 3306);
         mysqlDatabase = c.getString("storage.mysql.database", mysqlDatabase);
@@ -1285,6 +1294,22 @@ public final class Settings {
 
     public int periodRetentionDays() {
         return periodRetentionDays;
+    }
+
+    public boolean backupEnabled() {
+        return backupEnabled;
+    }
+
+    public int backupIntervalHours() {
+        return backupIntervalHours;
+    }
+
+    public int backupKeep() {
+        return backupKeep;
+    }
+
+    public boolean backupIncludeDatabase() {
+        return backupIncludeDatabase;
     }
 
     public String proxyMode() {

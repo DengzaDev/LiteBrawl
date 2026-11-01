@@ -389,18 +389,10 @@ public final class WebConfigServer {
         String name = query.getOrDefault("name", "");
         String result = callSync(() -> switch (name) {
             case "backup" -> {
-                File source = new File(plugin.getDataFolder(), "config.yml");
-                String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-                File target = new File(plugin.getDataFolder(), "backup/config-" + stamp + ".yml");
-                try {
-                    if (!target.getParentFile().exists() && !target.getParentFile().mkdirs()) {
-                        yield "无法创建备份目录";
-                    }
-                    Files.copy(source.toPath(), target.toPath());
-                    yield "已备份到 backup/" + target.getName();
-                } catch (IOException ex) {
-                    yield "备份失败: " + ex.getMessage();
-                }
+                // 完整备份（配置 + 数据库）是 IO 活，丢后台跑，别卡主线程
+                plugin.getServer().getScheduler().runTaskAsynchronously(plugin,
+                        () -> plugin.backups().create("网页"));
+                yield "已在后台开始备份（结果看控制台日志，或用 /lb backup list 查看）";
             }
             case "map_next" -> {
                 plugin.rotation().rotate();
