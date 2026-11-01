@@ -602,5 +602,12 @@ node tools/WebCheck.cjs
 
 [MIT](LICENSE)。
 
-第三方依赖（Paper API、Adventure、snakeyaml、sqlite-jdbc、Vault）遵循各自的协议，
-本项目只在编译期引用 / 打包分发，不改动它们的源码。
+第三方依赖遵循各自的协议，本项目只在编译期引用 / 打包分发，不改动它们的源码：
+
+| 依赖 | 用途 | 是否打包进 jar |
+|---|---|---|
+| Paper API | 服务端接口 | 否（编译期 `provided`） |
+| Adventure | MiniMessage 文本渲染 | 否（Paper 自带） |
+| snakeyaml | YAML 解析 | 否（Paper 自带，经 Bukkit API 使用） |
+| sqlite-jdbc | SQLite 驱动 | 是 |
+| mysql-connector-j | MySQL 驱动 | 是 |

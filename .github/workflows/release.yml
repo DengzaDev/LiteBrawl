@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的 tag（例如 v1.0.1）'
+        required: true
 
 permissions:
   contents: write
@@ -11,9 +16,13 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
 
       - name: 安装 JDK 21
         uses: actions/setup-java@v4
@@ -28,13 +37,14 @@ jobs:
       - name: 打包热更新示例
         run: |
           cd tools/hotfix-src
-          zip -q -r "$GITHUB_WORKSPACE/target/LiteBrawl-${{ github.ref_name }}.hotfix" hotfix.yml
+          zip -q -r "$GITHUB_WORKSPACE/target/LiteBrawl-$RELEASE_TAG.hotfix" hotfix.yml
           ls -l "$GITHUB_WORKSPACE/target"
 
       - name: 发布 Release
         uses: softprops/action-gh-release@v2
         with:
-          name: LiteBrawl ${{ github.ref_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: LiteBrawl ${{ env.RELEASE_TAG }}
           body_path: CHANGELOG.md
           files: |
             target/LiteBrawl-*.jar
