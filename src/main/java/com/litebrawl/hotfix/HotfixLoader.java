@@ -168,7 +168,7 @@ public final class HotfixLoader {
                 }
             }
 
-            // 1) 规则（支持 +N / -N / remove）
+            // 1) 规则：直接覆盖 / +N -N 增量 / remove 删除 / 键名带 + 或 - 表示列表追加与移除
             Map<String, Object> rules = new LinkedHashMap<>();
             Map<String, Object> previous = new LinkedHashMap<>();
             ConfigurationSection ruleSection = manifest.getConfigurationSection("rules");
@@ -178,8 +178,21 @@ public final class HotfixLoader {
                     if (value instanceof ConfigurationSection) {
                         continue;
                     }
-                    previous.put(key, plugin.getConfig().get(key));
-                    rules.put(key, resolveRuleValue(key, value));
+                    String path = key;
+                    int listOp = 0; // 0 = 直接写值，1 = 追加到列表，2 = 从列表移除
+                    if (path.endsWith("+")) {
+                        listOp = 1;
+                        path = path.substring(0, path.length() - 1).trim();
+                    } else if (path.endsWith("-")) {
+                        listOp = 2;
+                        path = path.substring(0, path.length() - 1).trim();
+                    }
+                    previous.putIfAbsent(path, plugin.getConfig().get(path));
+                    if (listOp == 0) {
+                        rules.put(path, resolveRuleValue(path, value));
+                    } else {
+                        rules.put(path, mergeList(rules, path, value, listOp == 1));
+                    }
                 }
             }
             if (!rules.isEmpty()) {
@@ -215,9 +228,23 @@ public final class HotfixLoader {
             String description = manifest.getString("description", "");
             loaded.put(id, new Loaded(id, description, module, loader, rules, previous,
                     moduleName == null ? "" : moduleName, file.getName()));
+
+            // 自动关闭：auto-disable-after 秒后自己 unload 并还原配置，适合"临时活动加成"
+            int autoDisable = manifest.getInt("auto-disable-after", 0);
+            if (autoDisable > 0) {
+                final String autoId = id;
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (loaded.containsKey(autoId)) {
+                        plugin.getLogger().info("热更新 " + autoId + " 到时自动关闭");
+                        unload(autoId);
+                    }
+                }, autoDisable * 20L);
+            }
+
             plugin.getLogger().info("热更新已应用: " + id
                     + (rules.isEmpty() ? "" : "（覆盖 " + rules.size() + " 项配置）")
-                    + (module == null ? "" : "（模块 " + moduleName + "）"));
+                    + (module == null ? "" : "（模块 " + moduleName + "）")
+                    + (autoDisable > 0 ? "（" + autoDisable + " 秒后自动关闭）" : ""));
             return null;
         } catch (Exception ex) {
             plugin.getLogger().warning("应用热更新 " + id + " 失败: " + ex);
@@ -452,6 +479,46 @@ public final class HotfixLoader {
      * key: remove     删除这个键
      * </pre>
      */
+    /**
+     * 列表规则：键名以 {@code +} 结尾表示追加、以 {@code -} 结尾表示移除。
+     *
+     * <pre>
+     * rules:
+     *   spawn.lethal-blocks+: [ SLIME_BLOCK ]         # 临时多加一个即死方块
+     *   spawn.lethal-blocks-: [ BAMBOO_MOSAIC_SLAB ]  # 临时去掉一个
+     * </pre>
+     *
+     * <p><b>必须基于「本次已累积的结果」而不是配置文件原值</b>：同一路径可能既有 + 又有 -，
+     * 各自从原值出发的话，后处理的那条会把先处理的那条整个覆盖掉。</p>
+     *
+     * <p>返回合并后的完整列表（而不是增量），这样上层「覆盖配置」不需要懂列表语义，
+     * 卸载时也能靠 previous 里记下的原列表整份还原。</p>
+     */
+    private List<String> mergeList(Map<String, Object> rules, String path, Object value, boolean add) {
+        List<String> current = new ArrayList<>();
+        Object pending = rules.get(path);
+        List<?> base = pending instanceof List<?> list ? list : plugin.getConfig().getList(path);
+        if (base != null) {
+            for (Object item : base) {
+                current.add(String.valueOf(item));
+            }
+        }
+        List<String> delta = new ArrayList<>();
+        if (value instanceof List<?> list) {
+            for (Object item : list) {
+                delta.add(String.valueOf(item));
+            }
+        } else if (value != null) {
+            delta.add(String.valueOf(value));
+        }
+        if (add) {
+            current.addAll(delta);
+        } else {
+            current.removeAll(delta);
+        }
+        return current;
+    }
+
     private Object resolveRuleValue(String key, Object value) {
         if (value instanceof String text) {
             String trimmed = text.trim();
@@ -508,6 +575,77 @@ public final class HotfixLoader {
             } catch (IllegalArgumentException ex) {
                 plugin.getLogger().warning("无效的音效名: " + raw);
             }
+            return;
+        }
+        if (trimmed.startsWith("msg:")) {
+            // msg:<玩家名|all>:<文本> —— 私聊，或 all 广播（不带前缀）
+            String rest = trimmed.substring("msg:".length()).trim();
+            int split = rest.indexOf(':');
+            if (split <= 0) {
+                plugin.getLogger().warning("msg 动作格式应为 msg:<玩家|all>:<文本>");
+                return;
+            }
+            String target = rest.substring(0, split).trim();
+            var component = Msg.mini(rest.substring(split + 1).trim());
+            if (target.equalsIgnoreCase("all")) {
+                for (var player : Bukkit.getOnlinePlayers()) {
+                    player.sendMessage(component);
+                }
+            } else {
+                var player = Bukkit.getPlayerExact(target);
+                if (player == null) {
+                    plugin.getLogger().warning("msg 的目标不在线: " + target);
+                    return;
+                }
+                player.sendMessage(component);
+            }
+            return;
+        }
+        if (trimmed.startsWith("actionbar:")) {
+            var component = Msg.mini(trimmed.substring("actionbar:".length()).trim());
+            for (var player : Bukkit.getOnlinePlayers()) {
+                player.sendActionBar(component);
+            }
+            return;
+        }
+        if (trimmed.startsWith("cmd-as:")) {
+            // cmd-as:<玩家名>:<命令> —— 以玩家身份执行（受权限与条件限制）
+            String rest = trimmed.substring("cmd-as:".length()).trim();
+            int split = rest.indexOf(':');
+            if (split <= 0) {
+                plugin.getLogger().warning("cmd-as 动作格式应为 cmd-as:<玩家>:<命令>");
+                return;
+            }
+            String target = rest.substring(0, split).trim();
+            String command = rest.substring(split + 1).trim();
+            if (command.startsWith("/")) {
+                command = command.substring(1);
+            }
+            var player = Bukkit.getPlayerExact(target);
+            if (player == null) {
+                plugin.getLogger().warning("cmd-as 的目标不在线: " + target);
+                return;
+            }
+            Bukkit.dispatchCommand(player, command);
+            return;
+        }
+        if (trimmed.startsWith("delay:")) {
+            // delay:<秒>:<另一个动作> —— 延迟执行，便于做出"开场白 + 3 秒后开战"这类节奏
+            String rest = trimmed.substring("delay:".length()).trim();
+            int split = rest.indexOf(':');
+            if (split <= 0) {
+                plugin.getLogger().warning("delay 动作格式应为 delay:<秒>:<动作>");
+                return;
+            }
+            int seconds;
+            try {
+                seconds = Math.max(0, Integer.parseInt(rest.substring(0, split).trim()));
+            } catch (NumberFormatException ex) {
+                plugin.getLogger().warning("delay 的秒数不是数字: " + rest);
+                return;
+            }
+            String inner = rest.substring(split + 1).trim();
+            Bukkit.getScheduler().runTaskLater(plugin, () -> runAction(inner), seconds * 20L);
             return;
         }
         plugin.getLogger().warning("未知的热更新动作: " + trimmed);
