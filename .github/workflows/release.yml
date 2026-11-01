@@ -35,7 +35,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: LiteBrawl ${{ github.ref_name }}
-          generate_release_notes: true
+          body_path: CHANGELOG.md
           files: |
             target/LiteBrawl-*.jar
             target/*.hotfix
