@@ -325,8 +325,17 @@ public final class HotfixLoader {
                     : (matchesVersion(requires, pluginVersion()) ? "<green>" : "<red>") + requires + "</gray>")
                     + " <dark_gray>(当前 " + pluginVersion() + ")</dark_gray></gray>");
             ConfigurationSection rules = manifest.getConfigurationSection("rules");
-            lines.add("<gray>rules = <white>" + (rules == null ? 0 : rules.getKeys(true).size())
-                    + "</white> 项</gray>");
+            // 只数叶子键：rules 里的 "bounty.base" 会被 YAML 解析成 bounty -> base 的嵌套结构，
+            // 直接用 getKeys(true).size() 会把中间节点也算进去，显示成 5 而实际只覆盖 3 项
+            int ruleCount = 0;
+            if (rules != null) {
+                for (String key : rules.getKeys(true)) {
+                    if (!(rules.get(key) instanceof ConfigurationSection)) {
+                        ruleCount++;
+                    }
+                }
+            }
+            lines.add("<gray>rules = <white>" + ruleCount + "</white> 项</gray>");
             lines.add("<gray>actions = <white>" + manifest.getStringList("actions").size() + "</white> 条</gray>");
             String module = manifest.getString("module");
             if (module != null && !module.isBlank()) {

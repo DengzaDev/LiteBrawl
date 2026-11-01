@@ -445,7 +445,10 @@ public final class WebConfigServer {
             }
             default -> "未知动作: " + name;
         });
-        send(exchange, 200, "text/plain; charset=utf-8", result == null ? "超时" : result);
+        String text = result == null ? "超时" : result;
+        // 未知动作按 4xx 返回，避免调用方把「没这个动作」当成成功
+        int code = text.startsWith("未知动作") ? 400 : 200;
+        send(exchange, code, "text/plain; charset=utf-8", text);
     }
 
     private void handleStatus(HttpExchange exchange) throws IOException {
@@ -576,8 +579,10 @@ public final class WebConfigServer {
     public String issueLinkCode(java.util.UUID uuid) {
         String code = String.format(Locale.ROOT, "%06d", java.util.concurrent.ThreadLocalRandom.current()
                 .nextInt(1_000_000));
-        linkCodes.put(code, uuid);
+        // 先写过期时间，再写值：清扫任务是「删没有 expiry 的孤儿 code」，
+        // 顺序反过来的话，清扫插在两次 put 之间会把刚发出去的码删掉。
         linkExpiry.put(code, System.currentTimeMillis() + 5 * 60 * 1000L);
+        linkCodes.put(code, uuid);
         return code;
     }
 
@@ -591,8 +596,9 @@ public final class WebConfigServer {
             return;
         }
         String token = UUID.randomUUID().toString().replace("-", "");
-        playerTokens.put(token, uuid);
+        // 同样先写过期时间再写值，避免被清扫当成孤儿令牌删掉
         playerTokenExpiry.put(token, System.currentTimeMillis() + 12 * 60 * 60 * 1000L);
+        playerTokens.put(token, uuid);
         var offline = Bukkit.getOfflinePlayer(uuid);
         send(exchange, 200, "application/json; charset=utf-8",
                 "{\"token\":" + q(token) + ",\"name\":" + q(offline.getName() == null ? "?" : offline.getName()) + "}");

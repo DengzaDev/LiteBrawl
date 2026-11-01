@@ -1066,6 +1066,14 @@ public final class RootCommand implements CommandExecutor, TabCompleter {
                     }
                 }
                 int created = plugin.bots().spawnBots(amount);
+                if (created == 0) {
+                    // 以前这里只报「已生成 0 个」，玩家不知道是地图没有出生点
+                    var active = plugin.maps().active().orElse(null);
+                    msg(sender, active == null
+                            ? "<red>没有生成假人：还没有注册地图（/maps create）</red>"
+                            : "<red>没有生成假人：地图没有可用出生点，先 /map scan 扫出绿宝石块</red>");
+                    return;
+                }
                 msg(sender, "<green>已生成 %count% 个假人</green> <dark_gray>(当前 %total%)</dark_gray>",
                         "count", String.valueOf(created),
                         "total", String.valueOf(plugin.bots().count()));

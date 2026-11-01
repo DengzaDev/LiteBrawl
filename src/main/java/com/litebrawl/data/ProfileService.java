@@ -41,9 +41,20 @@ public final class ProfileService {
     }
 
     public Profile load(UUID uuid, String name) {
+        // 已有缓存就以缓存为准：loadAsync 与主线程 get() 可能并发，
+        // 直接 cache.put 会把内存里的最新数据（刚加的硬币/经验）覆盖成库里的旧值。
+        Profile existing = cache.get(uuid);
+        if (existing != null) {
+            existing.setName(name);
+            return existing;
+        }
         Profile profile = plugin.storage().find(uuid).orElseGet(() -> new Profile(uuid, name));
         profile.setName(name);
-        cache.put(uuid, profile);
+        Profile prev = cache.putIfAbsent(uuid, profile);
+        if (prev != null) {
+            prev.setName(name);
+            return prev;
+        }
         return profile;
     }
 
@@ -113,9 +124,19 @@ public final class ProfileService {
         if (profile == null) {
             return;
         }
+        UUID uuid = profile.getUuid();
+        String name = profile.getName();
+        // 四个桶的键先算好再丢到后台：一是避免在击杀回调里同步写库卡主线程，
+        // 二是保证日/周/月/年四条用的是同一时刻的键（跨午夜时不会分裂到两天）
+        List<String> keys = new ArrayList<>();
         for (Period period : Period.tracked()) {
-            plugin.storage().recordStat(profile.getUuid(), profile.getName(), period.key(), column, 1);
+            keys.add(period.key());
         }
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            for (String key : keys) {
+                plugin.storage().recordStat(uuid, name, key, column, 1);
+            }
+        });
     }
 
     /** 按周期取榜；ALL 走总数表。 */
