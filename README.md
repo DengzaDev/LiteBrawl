@@ -83,7 +83,7 @@
 ### 编译
 
 ```bash
-git clone https://github.com/<你的账号>/LiteBrawl.git
+git clone https://github.com/DengzaDev/LiteBrawl.git
 cd LiteBrawl
 mvn -B package
 ```

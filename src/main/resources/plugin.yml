@@ -1,0 +1,75 @@
+name: LiteBrawl
+version: '${project.version}'
+main: com.litebrawl.LiteBrawlPlugin
+api-version: '1.21'
+authors: [ LiteBrawl ]
+description: 小型大乱斗 · 随机出生点 / 固定装备 / 组队免伤 / 赏金 / 硬币与等级 / 外观与称号 / 记分板 / 假人 / 热更新
+
+commands:
+  litebrawl:
+    description: LiteBrawl 管理命令
+    aliases: [ lb, lbrawl ]
+    permission: litebrawl.admin
+    usage: /lb help
+  maps:
+    description: 地图管理
+    permission: litebrawl.admin
+    usage: /maps <create|list|select|delete>
+  map:
+    description: 当前地图设置
+    permission: litebrawl.admin
+    usage: /map <setspawn|scan|info|bar>
+  shop:
+    description: 打开商店
+    usage: /shop
+  start:
+    description: 进入战场
+    usage: /start
+  stats:
+    description: 查看战绩
+    usage: /stats [玩家]
+  leaderboard:
+    description: 查看排行榜
+    aliases: [ top, lbboard ]
+    usage: /top <kills|level|coins|deaths>
+  sidebar:
+    description: 开关侧边栏记分板
+    aliases: [ sb ]
+    usage: /sb
+  team:
+    description: 组队
+    usage: /team <create|accept|leave|invite <玩家>>
+  cosmetic:
+    description: 管理已购买的外观
+    aliases: [ cos ]
+    usage: /cosmetic <list|equip <id>|off <类型>>
+  spawn:
+    description: 返回出生点（战斗中无法使用）
+    usage: /spawn
+  board:
+    description: 打开排行榜面板（左键/右键切换）
+    aliases: [ boards, rank ]
+    usage: /board
+  play:
+    description: 通过代理跳转到其它服务器
+    aliases: [ hub ]
+    usage: /play [服务器名]
+  vote:
+    description: 投票下一张地图
+    aliases: [ mapvote ]
+    usage: /vote [地图id]
+  link:
+    description: 生成网页面板绑定码
+    aliases: [ bind ]
+    usage: /link
+
+permissions:
+  litebrawl.admin:
+    description: 管理地图、排行榜、经济
+    default: op
+  litebrawl.bypass.build:
+    description: 允许绕过方块保护（能破坏/放置方块）
+    default: op
+  litebrawl.bypass.lethal:
+    description: 免疫即死方块（站上去不会死）
+    default: false

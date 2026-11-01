@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LiteBrawl 控制台</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0f1117; --panel: #171a23; --panel-2: #1d212c; --line: #272c39;
+    --text: #e7eaf1; --muted: #8b95a9; --accent: #4f8cff;
+    --ok: #37d39b; --warn: #f5b942; --err: #f2668b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; height: 100vh; overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif; font-size: 14px; }
+  .app { display: grid; grid-template-columns: 210px 1fr 300px; height: 100vh; }
+  .app.player { grid-template-columns: 1fr; }
+
+  nav { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: auto; }
+  .brand { padding: 18px 16px 12px; font-weight: 700; letter-spacing: .4px; }
+  .brand span { color: var(--muted); font-weight: 400; font-size: 12px; display: block; margin-top: 4px; }
+  .nav-item { padding: 10px 16px; cursor: pointer; color: var(--muted); border-left: 3px solid transparent;
+    display: flex; justify-content: space-between; align-items: center; }
+  .nav-item:hover { background: var(--panel-2); color: var(--text); }
+  .nav-item.active { color: var(--text); border-left-color: var(--accent); background: var(--panel-2); }
+  .nav-item .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); opacity: 0; }
+  .nav-item.dirty .dot { opacity: 1; }
+
+  main { display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 12px 20px;
+    border-bottom: 1px solid var(--line); background: var(--panel); }
+  .topbar h2 { font-size: 15px; margin: 0; font-weight: 600; }
+  .topbar .spacer { flex: 1; }
+  .content { flex: 1; overflow: auto; padding: 20px; }
+  .section { display: none; max-width: 920px; }
+  .section.active { display: block; }
+  .section h3 { margin: 0 0 4px; font-size: 15px; }
+  .section .desc { color: var(--muted); font-size: 12.5px; margin-bottom: 18px; line-height: 1.7; }
+
+  .field { display: grid; grid-template-columns: 220px 1fr; gap: 14px; align-items: start; margin-bottom: 14px; }
+  .field label { color: var(--muted); padding-top: 8px; font-size: 13px; }
+  .field label code { display: block; font-size: 11px; color: #5c6577; margin-top: 2px; }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; outline: none; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { min-height: 84px; font-family: Consolas, monospace; resize: vertical; }
+  .switch { display: flex; align-items: center; gap: 10px; padding-top: 4px; }
+  .switch input { width: 40px; height: 22px; appearance: none; background: #333a49; border-radius: 999px; position: relative; cursor: pointer; transition: .18s; }
+  .switch input:checked { background: var(--accent); }
+  .switch input::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .18s; }
+  .switch input:checked::after { left: 21px; }
+
+  button { border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 8px;
+    padding: 8px 14px; font-size: 13px; cursor: pointer; font-weight: 600; font-family: inherit; }
+  button.ghost { background: transparent; color: var(--muted); border-color: var(--line); }
+  button.ghost:hover { color: var(--text); border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.small { padding: 4px 10px; font-size: 12px; }
+
+  aside { background: var(--panel); border-left: 1px solid var(--line); overflow: auto; padding: 16px; }
+  .card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+  .card h4 { margin: 0 0 10px; font-size: 12.5px; color: var(--muted); font-weight: 600; letter-spacing: .3px; }
+  .stat { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+  .actions { display: grid; gap: 8px; }
+  .actions button { width: 100%; }
+
+  .steps { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .step { padding: 6px 12px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); font-size: 12.5px; cursor: pointer; }
+  .step.active { border-color: var(--accent); color: var(--text); }
+  .step.done { border-color: var(--ok); color: var(--ok); }
+  .wizard-box { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+
+  /* 编辑器 */
+  .editor-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .editor-bar input[type=text] { width: 220px; }
+  .editor-wrap { display: grid; grid-template-columns: 1fr 190px; gap: 12px; }
+  .code-box { position: relative; display: grid; grid-template-columns: 52px 1fr;
+    border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #0d0f15;
+    height: calc(100vh - 260px); min-height: 320px; }
+  .gutter { padding: 12px 8px 12px 0; text-align: right; color: #4a5468; font: 13px/1.62 Consolas, monospace;
+    background: #12151d; border-right: 1px solid var(--line); overflow: hidden; user-select: none; }
+  .code-layer, .code-input { margin: 0; padding: 12px 14px; font: 13px/1.62 Consolas, "JetBrains Mono", monospace;
+    white-space: pre; overflow: auto; tab-size: 2; }
+  .code-layer { position: absolute; inset: 0 0 0 52px; pointer-events: none; color: #cfd8e8; }
+  .code-layer .k { color: #7fb3ff; } .code-layer .s { color: #b6e39a; }
+  .code-layer .n { color: #f2bf6b; } .code-layer .b { color: #d29bf0; }
+  .code-layer .c { color: #5c6577; font-style: italic; } .code-layer .d { color: #8b95a9; }
+  .code-input { position: relative; grid-column: 2; background: transparent; color: transparent;
+    caret-color: #fff; border: 0; outline: none; resize: none; z-index: 2; }
+  .code-input::selection { background: rgba(79,140,255,.35); }
+  .outline { border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2);
+    overflow: auto; height: calc(100vh - 260px); min-height: 320px; }
+  .outline h5 { margin: 0; padding: 10px 12px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); }
+  .outline div { padding: 6px 12px; font-size: 12.5px; color: var(--muted); cursor: pointer; font-family: Consolas, monospace; }
+  .outline div:hover { background: var(--panel); color: var(--text); }
+  .stat-line { color: var(--muted); font-size: 12px; margin-left: auto; }
+
+  /* 文件列表 / 表格 */
+  .file-list { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .file-chip { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2);
+    color: var(--muted); font-size: 12.5px; cursor: pointer; font-family: Consolas, monospace; }
+  .file-chip.active { border-color: var(--accent); color: var(--text); }
+  .file-chip.missing { opacity: .45; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  tbody tr:hover { background: var(--panel-2); }
+  .num { text-align: right; font-family: Consolas, monospace; }
+
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin: 14px 0; }
+  .mini { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .mini .k { color: var(--muted); font-size: 12px; }
+  .mini .v { font-size: 20px; font-weight: 700; margin-top: 4px; }
+
+  #toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 12px);
+    background: #1d2738; border: 1px solid var(--accent); color: #dbe7ff; padding: 10px 18px;
+    border-radius: 10px; font-size: 13px; opacity: 0; transition: .2s; pointer-events: none; max-width: 60ch; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #toast.err { border-color: var(--err); background: #2c1c24; color: #ffd9e2; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <nav id="navWrap">
+    <div class="brand">LiteBrawl<span>配置控制台</span></div>
+    <div id="nav"></div>
+  </nav>
+
+  <main>
+    <div class="topbar">
+      <h2 id="title">向导</h2>
+      <div class="spacer"></div>
+      <label style="color:var(--muted);font-size:12.5px;display:flex;gap:6px;align-items:center">
+        <input type="checkbox" id="autosave"> 自动保存
+      </label>
+      <span id="state" style="color:var(--muted);font-size:12.5px"></span>
+      <button id="save">保存修改</button>
+      <button id="reload" class="ghost">重载</button>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+
+  <aside id="side">
+    <div class="card">
+      <h4>运行状态</h4>
+      <div id="status">加载中…</div>
+    </div>
+    <div class="card">
+      <h4>快捷操作</h4>
+      <div class="actions">
+        <button class="ghost" data-action="backup">备份配置文件</button>
+        <button class="ghost" data-action="map_next">立即切到下一张图</button>
+        <button class="ghost" data-action="scan">扫描出生方块</button>
+        <button class="ghost" data-action="boost_stop">关闭所有加成</button>
+        <button class="ghost" data-action="boards">查看全息榜</button>
+      </div>
+    </div>
+    <div class="card">
+      <h4>说明</h4>
+      <div style="color:var(--muted);font-size:12.5px;line-height:1.75">
+        改完点 <b style="color:var(--text)">保存修改</b>，或打开 <b style="color:var(--text)">自动保存</b>。<br>
+        存储类型、端口这类要重启的项会在字段下标出。<br>
+        玩家可以打 <b style="color:var(--text)">/link</b> 拿绑定码，自己上玩家面板。
+      </div>
+    </div>
+  </aside>
+</div>
+<div id="toast"></div>
+
+<script>
+const TOKEN = new URLSearchParams(location.search).get('token') || '';
+const PLAYER_MODE = location.pathname.replace(/\/$/, '') === '/me';
+const content = document.getElementById('content');
+const nav = document.getElementById('nav');
+const titleEl = document.getElementById('title');
+const stateEl = document.getElementById('state');
+const toast = document.getElementById('toast');
+
+let flat = {}, original = {}, inputs = {};
+let playerToken = localStorage.getItem('lb_player_token') || '';
+let playerName = localStorage.getItem('lb_player_name') || '';
+let autosaveEnabled = localStorage.getItem('lb_autosave') === '1';
+let autosaveTimer = null;
+
+/* ---------------- 请求 ---------------- */
+async function api(path, opts) {
+  const res = await fetch(path, Object.assign({ headers: { 'X-Token': TOKEN } }, opts || {}));
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || ('HTTP ' + res.status));
+  return text;
+}
+async function playerApi(path, opts) {
+  const res = await fetch(path, Object.assign({
+    headers: { 'X-Player-Token': playerToken }
+  }, opts || {}));
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || ('HTTP ' + res.status));
+  return text;
+}
+function toastMsg(text, isErr) {
+  toast.textContent = text;
+  toast.className = 'show' + (isErr ? ' err' : '');
+  clearTimeout(toastMsg._t);
+  toastMsg._t = setTimeout(() => { toast.className = ''; }, 2800);
+}
+
+/* ---------------- 代码编辑器组件 ---------------- */
+function escapeHtml(text) {
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function colorValue(text) {
+  if (!text) return '';
+  let result = '', last = 0;
+  const regex = /("[^"]*"|'[^']*'|\s#.*|#[^\s].*|\b\d+(?:\.\d+)?\b|\b(?:true|false)\b)/g;
+  let m;
+  while ((m = regex.exec(text)) !== null) {
+    result += escapeHtml(text.slice(last, m.index));
+    const token = m[0];
+    let cls = 'n';
+    if (token.startsWith('"') || token.startsWith("'")) cls = 's';
+    else if (token.startsWith('#')) cls = 'c';
+    else if (token === 'true' || token === 'false') cls = 'b';
+    result += '<span class="' + cls + '">' + escapeHtml(token) + '</span>';
+    last = m.index + token.length;
+  }
+  if (last === 0 && !/[0-9"'#]/.test(text)) {
+    return '<span class="s">' + escapeHtml(text) + '</span>';
+  }
+  return result + escapeHtml(text.slice(last));
+}
+function highlightLine(line, out) {
+  if (!line.trim()) { out.push(''); return; }
+  const indent = (line.match(/^(\s*)/) || ['', ''])[1];
+  let rest = line.slice(indent.length);
+  out.push(escapeHtml(indent));
+  if (rest.startsWith('#')) { out.push('<span class="c">' + escapeHtml(rest) + '</span>'); return; }
+  let dash = '';
+  if (rest.startsWith('- ')) { dash = '- '; rest = rest.slice(2); }
+  else if (rest === '-') { out.push('<span class="d">-</span>'); return; }
+  const keyMatch = rest.match(/^([^:#]+):(.*)$/);
+  out.push(escapeHtml(dash));
+  if (keyMatch) {
+    out.push('<span class="k">' + escapeHtml(keyMatch[1]) + '</span>:');
+    out.push(colorValue(keyMatch[2]));
+  } else {
+    out.push(colorValue(rest));
+  }
+}
+
+/** 带行号 / 高亮 / 大纲的编辑器，返回 DOM 和读写方法 */
+function createEditor(initial, options) {
+  const opts = options || {};
+  const wrap = document.createElement('div');
+  wrap.className = 'editor-wrap';
+  const codeBox = document.createElement('div');
+  codeBox.className = 'code-box';
+  const gutter = document.createElement('div');
+  gutter.className = 'gutter';
+  const layer = document.createElement('pre');
+  layer.className = 'code-layer';
+  const input = document.createElement('textarea');
+  input.className = 'code-input';
+  input.spellcheck = false;
+  input.value = initial || '';
+  codeBox.appendChild(gutter);
+  codeBox.appendChild(layer);
+  codeBox.appendChild(input);
+  wrap.appendChild(codeBox);
+
+  const outline = document.createElement('div');
+  outline.className = 'outline';
+  wrap.appendChild(outline);
+
+  let lines = [];
+  function repaint() {
+    lines = input.value.split('\n');
+    const out = [];
+    for (const line of lines) {
+      const row = [];
+      highlightLine(line, row);
+      out.push(row.join(''));
+    }
+    layer.innerHTML = out.join('\n');
+    gutter.innerHTML = lines.map((_, i) => i + 1).join('<br>');
+    if (opts.onStat) opts.onStat(lines.length, input.value.length);
+    buildOutline();
+  }
+  function buildOutline() {
+    const seen = new Set();
+    const items = [];
+    lines.forEach((line, i) => {
+      const m = line.match(/^([A-Za-z0-9_.-]+):/);
+      if (m && !seen.has(m[1])) { seen.add(m[1]); items.push({ name: m[1], line: i }); }
+    });
+    outline.innerHTML = '<h5>' + (opts.outlineTitle || '顶层配置项') + '</h5>';
+    items.forEach(item => {
+      const div = document.createElement('div');
+      div.textContent = item.name;
+      div.onclick = () => jumpTo(item.line);
+      outline.appendChild(div);
+    });
+  }
+  function jumpTo(index) {
+    const before = lines.slice(0, index).join('\n');
+    const offset = before.length + (index > 0 ? 1 : 0);
+    input.focus();
+    input.setSelectionRange(offset, offset);
+    input.scrollTop = Math.max(0, index * 21 - 60);
+    sync();
+  }
+  function sync() {
+    layer.scrollTop = input.scrollTop;
+    layer.scrollLeft = input.scrollLeft;
+    gutter.scrollTop = input.scrollTop;
+  }
+  input.addEventListener('input', repaint);
+  input.addEventListener('scroll', sync);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const s = input.selectionStart;
+      input.value = input.value.slice(0, s) + '  ' + input.value.slice(input.selectionEnd);
+      input.setSelectionRange(s + 2, s + 2);
+      repaint();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      if (opts.onSave) opts.onSave(input.value);
+    }
+  });
+  repaint();
+  sync();
+  return {
+    element: wrap,
+    get value() { return input.value; },
+    set value(v) { input.value = v; repaint(); },
+    jumpTo
+  };
+}
+
+/* ---------------- 字段 ---------------- */
+const SECTIONS = [
+  { id: 'wizard', title: '向导', wizard: true },
+  { id: 'basic', title: '基础', desc: '前缀、聊天格式、Tab、名字展示。', fields: [
+    { path: 'prefix', label: '消息前缀', type: 'text' },
+    { path: 'chat.enabled', label: '自定义聊天格式', type: 'bool' },
+    { path: 'chat.format', label: '聊天格式', type: 'text', hint: '%level% %team% %display% %message%' },
+    { path: 'tab.enabled', label: 'Tab 顶部信息', type: 'bool' },
+    { path: 'tab.header', label: 'Tab 头部', type: 'text' },
+    { path: 'display.nametag-level', label: '头顶显示等级', type: 'bool' },
+    { path: 'display.title-suffix', label: '称号后缀', type: 'text' },
+  ]},
+  { id: 'kit', title: '装备', desc: '开局装备与箭袋。', fields: [
+    { path: 'kit.chestplate', label: '胸甲', type: 'text' },
+    { path: 'kit.leggings', label: '护腿', type: 'text' },
+    { path: 'kit.boots', label: '靴子', type: 'text' },
+    { path: 'kit.sword', label: '武器', type: 'text' },
+    { path: 'kit.bow', label: '远程武器', type: 'text' },
+    { path: 'kit.arrows', label: '初始箭数', type: 'number' },
+    { path: 'kit.arrow-regen-seconds', label: '补箭间隔（秒）', type: 'number' },
+    { path: 'kit.max-arrow-bonus', label: '箭袋扩容上限', type: 'number' },
+    { path: 'kit.food', label: '食物', type: 'text' },
+    { path: 'kit.food-amount', label: '食物数量', type: 'number' },
+    { path: 'kit.unbreakable', label: '装备不掉耐久', type: 'bool' },
+  ]},
+  { id: 'economy', title: '经济', desc: '击杀奖励、赏金、等级曲线。', fields: [
+    { path: 'rewards.kill.coins', label: '击杀硬币', type: 'number' },
+    { path: 'rewards.kill.exp', label: '击杀经验', type: 'number' },
+    { path: 'rewards.assist.coins', label: '助杀硬币', type: 'number' },
+    { path: 'rewards.assist.exp', label: '助杀经验', type: 'number' },
+    { path: 'bounty.enabled', label: '启用赏金', type: 'bool' },
+    { path: 'bounty.min-killstreak', label: '悬赏连杀数', type: 'number' },
+    { path: 'bounty.base', label: '初始赏金', type: 'number' },
+    { path: 'bounty.per-kill', label: '每次叠加', type: 'number' },
+    { path: 'level.base-exp', label: '升级基础经验', type: 'number' },
+    { path: 'level.growth', label: '经验增长系数', type: 'number' },
+    { path: 'level.max-level', label: '等级上限', type: 'number' },
+    { path: 'anti-farm.enabled', label: '反刷分', type: 'bool' },
+    { path: 'anti-farm.decay', label: '重复击杀衰减', type: 'number' },
+  ]},
+  { id: 'combat', title: '战斗', desc: '手感与规则开关。', fields: [
+    { path: 'combat.no-attack-cooldown', label: '取消攻击冷却', type: 'bool' },
+    { path: 'combat.knockback-multiplier', label: '击退倍率', type: 'number' },
+    { path: 'combat.tag-seconds', label: '战斗模式时长（秒）', type: 'number' },
+    { path: 'combat.arrow-ground-seconds', label: '箭矢落地清除（秒）', type: 'number' },
+    { path: 'protection.seconds', label: '出生保护（秒）', type: 'number' },
+    { path: 'rules.mob-spawn', label: '允许生物生成', type: 'bool' },
+    { path: 'rules.lava-damage', label: '岩浆伤害', type: 'bool' },
+    { path: 'rules.fall-damage', label: '摔落伤害', type: 'bool' },
+    { path: 'rules.confiscate-glass-bottles', label: '没收玻璃瓶', type: 'bool' },
+  ]},
+  { id: 'bots', title: '假人', desc: '陪练假人。', fields: [
+    { path: 'bots.enabled', label: '启用假人', type: 'bool' },
+    { path: 'bots.auto', label: '按人数自动开关', type: 'bool' },
+    { path: 'bots.min-players', label: '少于多少人在线时上线', type: 'number' },
+    { path: 'bots.count', label: '假人数量', type: 'number' },
+    { path: 'bots.master-percent', label: '大师比例（%）', type: 'number' },
+    { path: 'bots.master-damage', label: '大师攻击力', type: 'number' },
+    { path: 'bots.respawn', label: '死亡后复活', type: 'bool' },
+    { path: 'bots.respawn-seconds', label: '复活延迟（秒）', type: 'number' },
+    { path: 'bots.silent', label: '静音', type: 'bool' },
+  ]},
+  { id: 'world', title: '地图', desc: '出生方块、轮换、票选。', fields: [
+    { path: 'spawn.block', label: '出生方块', type: 'text' },
+    { path: 'spawn.lethal-blocks', label: '即死方块（一行一个）', type: 'list' },
+    { path: 'spawn.y-offset', label: '出生高度偏移', type: 'number' },
+    { path: 'spawn.scan-radius', label: '扫描半径', type: 'number' },
+    { path: 'rotation.enabled', label: '自动轮换', type: 'bool' },
+    { path: 'rotation.mode', label: '轮换模式', type: 'select', options: ['ORDER', 'VOTE'] },
+    { path: 'rotation.seconds', label: '轮换间隔（秒）', type: 'number' },
+  ]},
+  { id: 'net', title: '网络/存储', desc: '改完需要重启服务器。', fields: [
+    { path: 'storage.type', label: '存储类型（重启）', type: 'select', options: ['SQLITE', 'MYSQL'] },
+    { path: 'storage.mysql.host', label: 'MySQL 地址', type: 'text' },
+    { path: 'storage.mysql.port', label: 'MySQL 端口', type: 'number' },
+    { path: 'storage.mysql.database', label: '数据库名', type: 'text' },
+    { path: 'storage.mysql.user', label: '用户名', type: 'text' },
+    { path: 'proxy.mode', label: '跨服模式（重启）', type: 'select', options: ['NONE', 'BUNGEE'] },
+    { path: 'proxy.default', label: '默认服务器', type: 'text' },
+    { path: 'web.port', label: '网页端口（重启）', type: 'number' },
+  ]},
+  { id: 'files', title: '配置文件', fileManager: true },
+  { id: 'db', title: '数据库', db: true },
+  { id: 'me', title: '玩家面板', player: true },
+  { id: 'raw', title: '原始 config', raw: true },
+];
+
+const WIZARD_STEPS = [
+  { title: '基础', desc: '服务器标识与聊天观感。', fields: ['prefix', 'chat.enabled', 'chat.format'] },
+  { title: '装备', desc: '开局给什么。', fields: ['kit.sword', 'kit.bow', 'kit.arrows', 'kit.arrow-regen-seconds', 'kit.food', 'kit.food-amount'] },
+  { title: '经济', desc: '击杀与助杀收益。', fields: ['rewards.kill.coins', 'rewards.kill.exp', 'rewards.assist.coins', 'rewards.assist.exp', 'bounty.enabled', 'bounty.min-streak'] },
+  { title: '战斗', desc: '手感与规则。', fields: ['combat.no-attack-cooldown', 'combat.knockback-multiplier', 'combat.tag-seconds', 'protection.seconds'] },
+  { title: '假人', desc: '没人的时候有人陪练。', fields: ['bots.enabled', 'bots.count', 'bots.master-percent', 'bots.silent'] },
+];
+const ALL_FIELDS = {};
+SECTIONS.forEach(s => (s.fields || []).forEach(f => { ALL_FIELDS[f.path] = f; }));
+
+/* ---------------- 表单 ---------------- */
+function makeField(path) {
+  const def = ALL_FIELDS[path] || { path, label: path, type: 'text' };
+  const wrap = document.createElement('div');
+  wrap.className = 'field';
+  const label = document.createElement('label');
+  label.innerHTML = def.label + '<code>' + path + '</code>' +
+    (def.hint ? '<code style="color:#4f8cff">' + def.hint + '</code>' : '');
+  wrap.appendChild(label);
+  const holder = document.createElement('div');
+  const value = flat[path];
+  if (def.type === 'bool') {
+    const sw = document.createElement('div');
+    sw.className = 'switch';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = value === true || value === 'true';
+    const tag = document.createElement('span');
+    tag.style.color = 'var(--muted)';
+    tag.textContent = input.checked ? '开启' : '关闭';
+    input.onchange = () => { tag.textContent = input.checked ? '开启' : '关闭'; markDirty(path); };
+    sw.appendChild(input); sw.appendChild(tag);
+    holder.appendChild(sw);
+    inputs[path] = { get: () => input.checked ? 'true' : 'false' };
+  } else if (def.type === 'select') {
+    const sel = document.createElement('select');
+    (def.options || []).forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt; o.textContent = opt;
+      if (String(value).toUpperCase() === opt) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.onchange = () => markDirty(path);
+    holder.appendChild(sel);
+    inputs[path] = { get: () => sel.value };
+  } else if (def.type === 'list') {
+    const ta = document.createElement('textarea');
+    ta.value = Array.isArray(value) ? value.join('\n') : (value || '');
+    ta.oninput = () => markDirty(path);
+    holder.appendChild(ta);
+    inputs[path] = { get: () => ta.value };
+  } else if (def.type === 'number') {
+    const input = document.createElement('input');
+    input.type = 'number'; input.step = 'any';
+    input.value = value === undefined ? '' : value;
+    input.oninput = () => markDirty(path);
+    holder.appendChild(input);
+    inputs[path] = { get: () => input.value };
+  } else {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = value === undefined ? '' : value;
+    input.oninput = () => markDirty(path);
+    holder.appendChild(input);
+    inputs[path] = { get: () => input.value };
+  }
+  wrap.appendChild(holder);
+  return wrap;
+}
+
+const dirty = new Set();
+function markDirty(path) {
+  dirty.add(path);
+  stateEl.textContent = dirty.size + ' 项未保存';
+  renderNav();
+  if (autosaveEnabled) {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => { saveChanges(true); }, 1200);
+  }
+}
+
+/* ---------------- 导航 ---------------- */
+let current = 'wizard';
+let wizardStep = 0;
+function renderNav() {
+  nav.innerHTML = '';
+  SECTIONS.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'nav-item' + (current === s.id ? ' active' : '') + (dirty.size && s.fields ? ' dirty' : '');
+    div.innerHTML = '<span>' + s.title + '</span><span class="dot"></span>';
+    div.onclick = () => show(s.id);
+    nav.appendChild(div);
+  });
+}
+
+function show(id) {
+  current = id;
+  const section = SECTIONS.find(s => s.id === id);
+  titleEl.textContent = section.title;
+  content.innerHTML = '';
+  inputs = {};
+  renderNav();
+
+  if (section.wizard) return renderWizard();
+  if (section.raw) return renderRaw();
+  if (section.fileManager) return renderFiles();
+  if (section.db) return renderDb();
+  if (section.player) return renderPlayerPanel();
+
+  const box = document.createElement('div');
+  box.className = 'section active';
+  const h = document.createElement('h3');
+  h.textContent = section.title;
+  box.appendChild(h);
+  if (section.desc) {
+    const d = document.createElement('div');
+    d.className = 'desc';
+    d.textContent = section.desc;
+    box.appendChild(d);
+  }
+  (section.fields || []).forEach(f => box.appendChild(makeField(f.path)));
+  content.appendChild(box);
+}
+
+/* ---------------- 向导 ---------------- */
+function renderWizard() {
+  const box = document.createElement('div');
+  box.className = 'section active';
+  const h = document.createElement('h3');
+  h.textContent = '开服向导';
+  box.appendChild(h);
+  const d = document.createElement('div');
+  d.className = 'desc';
+  d.textContent = '按顺序填完即可开玩。每步都能随时回来改，开启右上角「自动保存」就不用每次点保存。';
+  box.appendChild(d);
+
+  const steps = document.createElement('div');
+  steps.className = 'steps';
+  WIZARD_STEPS.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'step' + (i === wizardStep ? ' active' : (i < wizardStep ? ' done' : ''));
+    el.textContent = (i + 1) + '. ' + s.title;
+    el.onclick = () => { wizardStep = i; renderWizard(); };
+    steps.appendChild(el);
+  });
+  box.appendChild(steps);
+
+  const step = WIZARD_STEPS[wizardStep];
+  const wrap = document.createElement('div');
+  wrap.className = 'wizard-box';
+  const t = document.createElement('h3');
+  t.textContent = step.title;
+  wrap.appendChild(t);
+  const sd = document.createElement('div');
+  sd.className = 'desc';
+  sd.textContent = step.desc;
+  wrap.appendChild(sd);
+  step.fields.forEach(path => wrap.appendChild(makeField(path)));
+  box.appendChild(wrap);
+
+  const bar = document.createElement('div');
+  bar.style.cssText = 'margin-top:16px;display:flex;gap:8px';
+  const prev = document.createElement('button');
+  prev.className = 'ghost';
+  prev.textContent = '上一步';
+  prev.disabled = wizardStep === 0;
+  prev.onclick = () => { wizardStep--; renderWizard(); };
+  const next = document.createElement('button');
+  next.textContent = wizardStep === WIZARD_STEPS.length - 1 ? '完成并保存' : '下一步';
+  next.onclick = async () => {
+    if (wizardStep === WIZARD_STEPS.length - 1) await saveChanges();
+    else { wizardStep++; renderWizard(); }
+  };
+  bar.appendChild(prev); bar.appendChild(next);
+  box.appendChild(bar);
+  content.appendChild(box);
+}
+
+/* ---------------- 原始 config ---------------- */
+async function renderRaw() {
+  const box = document.createElement('div');
+  box.className = 'section active';
+  const h = document.createElement('h3');
+  h.textContent = '原始 config.yml';
+  box.appendChild(h);
+  const d = document.createElement('div');
+  d.className = 'desc';
+  d.textContent = '左侧行号 + 语法高亮，右侧大纲跳转；保存前会校验语法。';
+  box.appendChild(d);
+
+  const bar = document.createElement('div');
+  bar.className = 'editor-bar';
+  const search = document.createElement('input');
+  search.type = 'text';
+  search.placeholder = '搜关键字，回车跳转';
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = '保存并重载';
+  const stat = document.createElement('span');
+  stat.className = 'stat-line';
+  bar.appendChild(search); bar.appendChild(saveBtn); bar.appendChild(stat);
+  box.appendChild(bar);
+
+  let text = '';
+  try { text = await api('/api/config'); } catch (e) { text = '# 读取失败：' + e.message; }
+  const editor = createEditor(text, {
+    onStat: (lines, chars) => { stat.textContent = lines + ' 行 · ' + chars + ' 字符'; },
+    onSave: () => saveBtn.click()
+  });
+  box.appendChild(editor.element);
+  content.appendChild(box);
+
+  search.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !search.value) return;
+    const lines = editor.value.split('\n');
+    const idx = lines.findIndex(l => l.includes(search.value));
+    if (idx >= 0) editor.jumpTo(idx);
+    else toastMsg('没找到：' + search.value, true);
+  });
+  saveBtn.onclick = async () => {
+    try {
+      await api('/api/save', { method: 'POST', body: editor.value });
+      toastMsg('已保存并重载');
+      await loadFlat();
+    } catch (e) { toastMsg('保存失败：' + e.message, true); }
+  };
+}
+
+/* ---------------- 配置文件管理 ---------------- */
+async function renderFiles() {
+  const box = document.createElement('div');
+  box.className = 'section active';
+  const h = document.createElement('h3');
+  h.textContent = '配置文件';
+  box.appendChild(h);
+  const d = document.createElement('div');
+  d.className = 'desc';
+  d.textContent = '插件目录下所有可编辑文件。保存后会按文件类型自动重载（maps/boards/npcs/boost 会重新读盘）。';
+  box.appendChild(d);
+
+  const list = document.createElement('div');
+  list.className = 'file-list';
+  box.appendChild(list);
+
+  const bar = document.createElement('div');
+  bar.className = 'editor-bar';
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = '保存';
+  const reloadBtn = document.createElement('button');
+  reloadBtn.className = 'ghost';
+  reloadBtn.textContent = '重新读取';
+  const stat = document.createElement('span');
+  stat.className = 'stat-line';
+  bar.appendChild(saveBtn); bar.appendChild(reloadBtn); bar.appendChild(stat);
+  box.appendChild(bar);
+
+  const editorHost = document.createElement('div');
+  box.appendChild(editorHost);
+  content.appendChild(box);
+
+  let currentFile = 'messages.yml';
+  let editor = null;
+
+  async function open(name) {
+    currentFile = name;
+    [...list.children].forEach(c => c.classList.toggle('active', c.dataset.name === name));
+    editorHost.innerHTML = '加载中…';
+    try {
+      const text = await api('/api/file?name=' + encodeURIComponent(name));
+      editorHost.innerHTML = '';
+      editor = createEditor(text, {
+        outlineTitle: '顶层键',
+        onStat: (lines, chars) => { stat.textContent = name + ' · ' + lines + ' 行'; },
+        onSave: () => saveBtn.click()
+      });
+      editorHost.appendChild(editor.element);
+    } catch (e) {
+      editorHost.innerHTML = '<div class="desc">读取失败：' + escapeHtml(e.message) + '</div>';
+      editor = null;
+    }
+  }
+
+  try {
+    const files = JSON.parse(await api('/api/files'));
+    files.forEach(f => {
+      const chip = document.createElement('div');
+      chip.className = 'file-chip' + (f.exists ? '' : ' missing');
+      chip.dataset.name = f.name;
+      chip.textContent = f.name;
+      chip.onclick = () => open(f.name);
+      list.appendChild(chip);
+    });
+  } catch (e) {
+    list.textContent = '读取文件列表失败：' + e.message;
+  }
+
+  saveBtn.onclick = async () => {
+    if (!editor) return;
+    try {
+      const text = await api('/api/file?name=' + encodeURIComponent(currentFile), {
+        method: 'POST', body: editor.value
+      });
+      toastMsg(text);
+    } catch (e) { toastMsg('保存失败：' + e.message, true); }
+  };
+  reloadBtn.onclick = () => open(currentFile);
+  open(currentFile);
+}
+
+/* ---------------- 数据库 ---------------- */
+async function renderDb() {
+  const box = document.createElement('div');
+  box.className = 'section active';
+  const h = document.createElement('h3');
+  h.textContent = '数据库';
+  box.appendChild(h);
+  const d = document.createElement('div');
+  d.className = 'desc';
+  d.textContent = '只读浏览玩家数据（coins / experience / kills / deaths / assists 五张榜）。';
+  box.appendChild(d);
+
+  const bar = document.createElement('div');
+  bar.className = 'editor-bar';
+  const colSel = document.createElement('select');
+  [['kills', '击杀'], ['deaths', '死亡'], ['coins', '硬币'], ['experience', '经验'], ['assists', '助杀']]
+    .forEach(([v, t]) => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = '按' + t;
+      colSel.appendChild(o);
+    });
+  const limitSel = document.createElement('select');
+  [20, 50, 100].forEach(n => {
+    const o = document.createElement('option');
+    o.value = n; o.textContent = '前 ' + n + ' 名';
+    limitSel.appendChild(o);
+  });
+  bar.appendChild(colSel); bar.appendChild(limitSel);
+  box.appendChild(bar);
+
+  const tableBox = document.createElement('div');
+  box.appendChild(tableBox);
+  content.appendChild(box);
+
+  async function load() {
+    tableBox.innerHTML = '加载中…';
+    try {
+      const data = JSON.parse(await api('/api/db/top?column=' + colSel.value + '&limit=' + limitSel.value));
+      if (!data.rows.length) { tableBox.innerHTML = '<div class="desc">暂无数据</div>'; return; }
+      const rows = data.rows.map((r, i) => `<tr>
+        <td>${i + 1}</td>
+        <td>${escapeHtml(r.name)}</td>
+        <td class="num">${r.level}</td>
+        <td class="num">${r.coins}</td>
+        <td class="num">${r.kills}</td>
+        <td class="num">${r.deaths}</td>
+        <td class="num">${r.assists}</td>
+        <td class="num">${(r.kills / Math.max(1, r.deaths)).toFixed(2)}</td>
+      </tr>`).join('');
+      tableBox.innerHTML = `<table>
+        <thead><tr><th>#</th><th>玩家</th><th>等级</th><th>硬币</th><th>击杀</th><th>死亡</th><th>助杀</th><th>K/D</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    } catch (e) {
+      tableBox.innerHTML = '<div class="desc">读取失败：' + escapeHtml(e.message) + '</div>';
+    }
+  }
+  colSel.onchange = load;
+  limitSel.onchange = load;
+  load();
+}
+
+/* ---------------- 玩家面板 ---------------- */
+async function renderPlayerPanel() {
+  const box = document.createElement('div');
+  box.className = 'section active';
+  const h = document.createElement('h3');
+  h.textContent = '玩家面板';
+  box.appendChild(h);
+
+  if (!playerToken) {
+    const d = document.createElement('div');
+    d.className = 'desc';
+    d.innerHTML = '在游戏里打 <b>/link</b> 拿到 6 位绑定码，填在下面。绑定后可以在这里看自己的数据、换名字样式和称号。';
+    box.appendChild(d);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;max-width:420px';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = '6 位绑定码';
+    input.maxLength = 6;
+    const btn = document.createElement('button');
+    btn.textContent = '绑定';
+    btn.onclick = async () => {
+      try {
+        const data = JSON.parse(await api('/api/link?code=' + encodeURIComponent(input.value.trim())));
+        playerToken = data.token;
+        playerName = data.name;
+        localStorage.setItem('lb_player_token', playerToken);
+        localStorage.setItem('lb_player_name', playerName);
+        toastMsg('绑定成功：' + playerName);
+        renderPlayerPanel();
+      } catch (e) { toastMsg('绑定失败：' + e.message, true); }
+    };
+    row.appendChild(input); row.appendChild(btn);
+    box.appendChild(row);
+    content.appendChild(box);
+    return;
+  }
+
+  const head = document.createElement('div');
+  head.style.cssText = 'display:flex;gap:10px;align-items:center;margin-bottom:14px';
+  head.innerHTML = '<b>' + escapeHtml(playerName || '已绑定') + '</b>';
+  const out = document.createElement('button');
+  out.className = 'ghost small';
+  out.textContent = '解除绑定';
+  out.onclick = () => {
+    playerToken = ''; playerName = '';
+    localStorage.removeItem('lb_player_token');
+    localStorage.removeItem('lb_player_name');
+    renderPlayerPanel();
+  };
+  head.appendChild(out);
+  box.appendChild(head);
+
+  content.appendChild(box);
+  const dataBox = document.createElement('div');
+  box.appendChild(dataBox);
+
+  try {
+    const me = JSON.parse(await playerApi('/api/me'));
+    dataBox.innerHTML = `<div class="card-grid">
+      <div class="mini"><div class="k">等级</div><div class="v">${me.level}</div></div>
+      <div class="mini"><div class="k">硬币</div><div class="v">${me.coins}</div></div>
+      <div class="mini"><div class="k">击杀</div><div class="v">${me.kills}</div></div>
+      <div class="mini"><div class="k">死亡</div><div class="v">${me.deaths}</div></div>
+      <div class="mini"><div class="k">助杀</div><div class="v">${me.assists}</div></div>
+      <div class="mini"><div class="k">K/D</div><div class="v">${(me.kills / Math.max(1, me.deaths)).toFixed(2)}</div></div>
+    </div>`;
+
+    const ownedBox = document.createElement('div');
+    ownedBox.style.marginTop = '10px';
+    if (!me.owned.length) {
+      ownedBox.innerHTML = '<div class="desc">还没有外观，去游戏里 <b>/shop</b> 买。</div>';
+    } else {
+      const owned = me.owned.map(c => `<tr>
+        <td>${escapeHtml(c.name)}</td>
+        <td style="color:var(--muted)">${escapeHtml(c.type)}</td>
+        <td class="num">${me.equipped[c.type] === c.id ? '<span style="color:var(--ok)">已装备</span>' : ''}</td>
+        <td class="num">
+          ${me.equipped[c.type] === c.id
+            ? `<button class="ghost small" onclick="unequipCosmetic('${c.type}')">卸下</button>`
+            : `<button class="small" onclick="equipCosmetic('${c.id}')">装备</button>`}
+        </td>
+      </tr>`).join('');
+      ownedBox.innerHTML = `<table>
+        <thead><tr><th>外观</th><th>类型</th><th>状态</th><th></th></tr></thead>
+        <tbody>${owned}</tbody></table>`;
+    }
+    dataBox.appendChild(ownedBox);
+  } catch (e) {
+    dataBox.innerHTML = '<div class="desc">读取失败：' + escapeHtml(e.message) + '<br>可能绑定过期了，重新 /link 一次。</div>';
+  }
+}
+
+window.equipCosmetic = async (id) => {
+  try {
+    toastMsg(await playerApi('/api/me/equip?id=' + encodeURIComponent(id), { method: 'POST' }));
+    renderPlayerPanel();
+  } catch (e) { toastMsg('装备失败：' + e.message, true); }
+};
+window.unequipCosmetic = async (type) => {
+  try {
+    toastMsg(await playerApi('/api/me/unequip?type=' + encodeURIComponent(type), { method: 'POST' }));
+    renderPlayerPanel();
+  } catch (e) { toastMsg('卸下失败：' + e.message, true); }
+};
+
+/* ---------------- 保存 ---------------- */
+async function saveChanges(auto) {
+  const payload = [];
+  Object.keys(inputs).forEach(path => {
+    const value = inputs[path].get();
+    const before = Array.isArray(original[path]) ? original[path].join('\n') : String(original[path] ?? '');
+    const now = Array.isArray(value) ? value.join('\n') : String(value);
+    if (now !== before) payload.push(encodeURIComponent(path) + '=' + encodeURIComponent(now));
+  });
+  if (!payload.length) {
+    if (!auto) toastMsg('没有改动');
+    return;
+  }
+  try {
+    const text = await api('/api/set', {
+      method: 'POST',
+      headers: { 'X-Token': TOKEN, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: payload.join('&')
+    });
+    dirty.clear();
+    if (!auto) toastMsg(text);
+    else toastMsg('自动保存：' + text);
+    await loadFlat();
+    await loadState();
+  } catch (e) {
+    toastMsg('保存失败：' + e.message, true);
+  }
+}
+
+/* ---------------- 状态 ---------------- */
+async function loadState() {
+  const box = document.getElementById('status');
+  if (!box) return;
+  try {
+    const s = JSON.parse(await api('/api/state'));
+    box.innerHTML = `
+      <div class="stat"><span>版本</span><b>${s.version}</b></div>
+      <div class="stat"><span>在线 / 战场</span><b>${s.online} / ${s.playing}</b></div>
+      <div class="stat"><span>假人</span><b>${s.bots}</b></div>
+      <div class="stat"><span>TPS</span><b class="${s.tps >= 18 ? 'ok' : 'warn'}">${s.tps}</b></div>
+      <div class="stat"><span>地图</span><b>${s.maps.length}</b></div>
+      <div class="stat"><span>当前地图</span><b>${s.activeMap || '无'}</b></div>
+      <div class="stat"><span>轮换</span><b>${s.rotation.mode}${s.rotation.remaining > 0 ? ' · ' + s.rotation.remaining + 's' : ''}</b></div>
+      <div class="stat"><span>投票数</span><b>${s.rotation.votes}</b></div>
+      <div class="stat"><span>热更新</span><b>${s.hotfixes || '无'}</b></div>
+      ${s.boosts.map(b => `<div class="stat"><span>${b.type} x${b.multiplier}</span><b class="ok">${b.remaining}s</b></div>`).join('')}`;
+  } catch (e) {
+    box.textContent = '状态读取失败：' + e.message;
+  }
+}
+
+async function loadFlat() {
+  try {
+    flat = JSON.parse(await api('/api/config-flat'));
+    original = JSON.parse(JSON.stringify(flat));
+    inputs = {};
+    dirty.clear();
+    stateEl.textContent = '';
+    show(current);
+  } catch (e) {
+    toastMsg('读取配置失败：' + e.message, true);
+  }
+}
+
+/* ---------------- 启动 ---------------- */
+const autosaveBox = document.getElementById('autosave');
+if (autosaveBox) {
+  autosaveBox.checked = autosaveEnabled;
+  autosaveBox.onchange = () => {
+    autosaveEnabled = autosaveBox.checked;
+    localStorage.setItem('lb_autosave', autosaveEnabled ? '1' : '0');
+    toastMsg(autosaveEnabled ? '自动保存已开启（停手 1.2 秒后保存）' : '自动保存已关闭');
+  };
+}
+
+if (PLAYER_MODE) {
+  document.getElementById('app').classList.add('player');
+  document.getElementById('navWrap').style.display = 'none';
+  document.getElementById('side').style.display = 'none';
+  document.getElementById('save').style.display = 'none';
+  document.getElementById('reload').style.display = 'none';
+  autosaveBox.parentElement.style.display = 'none';
+  titleEl.textContent = '我的面板';
+  const code = new URLSearchParams(location.search).get('code');
+  if (code && !playerToken) {
+    (async () => {
+      try {
+        const data = JSON.parse(await api('/api/link?code=' + encodeURIComponent(code)));
+        playerToken = data.token;
+        playerName = data.name;
+        localStorage.setItem('lb_player_token', playerToken);
+        localStorage.setItem('lb_player_name', playerName);
+        history.replaceState(null, '', '/me');
+      } catch (e) { /* 交给面板显示 */ }
+      renderPlayerPanel();
+    })();
+  } else {
+    renderPlayerPanel();
+  }
+} else {
+  document.getElementById('save').onclick = () => saveChanges(false);
+  document.getElementById('reload').onclick = async () => {
+    try {
+      await api('/api/reload', { method: 'POST' });
+      toastMsg('已重载');
+      await loadFlat();
+      await loadState();
+    } catch (e) { toastMsg('重载失败：' + e.message, true); }
+  };
+  document.querySelectorAll('[data-action]').forEach(btn => {
+    btn.onclick = async () => {
+      const name = btn.dataset.action;
+      btn.disabled = true;
+      try {
+        toastMsg(await api('/api/action?name=' + encodeURIComponent(name), { method: 'POST' }));
+        await loadState();
+      } catch (e) {
+        toastMsg('操作失败：' + e.message, true);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  });
+  loadFlat();
+  loadState();
+  setInterval(loadState, 5000);
+}
+</script>
+</body>
+</html>

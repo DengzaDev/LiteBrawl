@@ -1,0 +1,606 @@
+# ============================================================
+#  LiteBrawl 配置文件
+#  所有文本字段支持 MiniMessage：
+#  https://docs.advntr.dev/minimessage/format.html
+#
+#  占位符约定：
+#    %level%   等级        %player%  玩家名
+#    %message% 聊天内容    %price%   商品价格
+#    %board%   榜单名      %rank%    名次
+#    %value%   榜单数值    %victim%  死者
+#    %killer%  击杀者
+# ============================================================
+
+prefix: "<gradient:#7ee8fa:#80ff72><bold>LiteBrawl</bold></gradient> <dark_gray>»</dark_gray> "
+
+# ---------------- 大厅物品 ----------------
+start-item:
+  material: NETHER_STAR
+  slot: 8
+  name: "<green><bold>开始游戏</bold></green>"
+  lore:
+    - "<gray>右键点击进入战场</gray>"
+    - "<dark_gray>随机传送到一个出生点</dark_gray>"
+
+# ---------------- 初始装备 ----------------
+# helmet 填 NONE 表示不戴头盔（按需求默认无头盔）
+kit:
+  helmet: NONE
+  chestplate: IRON_CHESTPLATE
+  leggings: IRON_LEGGINGS
+  boots: IRON_BOOTS
+  sword: IRON_SWORD
+  bow: BOW
+  # 默认弓带力量 I（留空 = 不加附魔）
+  bow-enchants:
+    power: 1
+  # 剑的附魔（默认无）
+  sword-enchants: {}
+  arrows: 4
+  arrow-regen-seconds: 5
+  # 商店「箭袋扩容」最多能加几支（上限 = arrows + 这个值）
+  max-arrow-bonus: 2
+  food: COOKED_BEEF
+  food-amount: 64
+  unbreakable: true
+
+# ---------------- 出生点与即死方块 ----------------
+spawn:
+  block: EMERALD_BLOCK
+  # 写上基础方块名即可，它的台阶/楼梯等变体会自动一起生效
+  # （BAMBOO_MOSAIC → BAMBOO_MOSAIC_SLAB / BAMBOO_MOSAIC_STAIRS 也算）
+  lethal-blocks:
+    - BAMBOO_MOSAIC
+    - BAMBOO_MOSAIC_SLAB
+    - BAMBOO_MOSAIC_STAIRS
+  # 假人踩到即死方块是否也死
+  lethal-affects-bots: true
+  # 传送到出生方块上方多少格
+  y-offset: 2
+  # /map scan 的扫描范围（以出生点为中心，单位：方块）
+  # 也可以在命令里临时指定：/map scan 320
+  scan-radius: 160
+  # 扫描高度范围：默认覆盖整个世界高度，天空图/洞穴图也不会漏
+  scan-y-min: -64
+  scan-y-max: 320
+
+# ---------------- 规则 ----------------
+rules:
+  keep-inventory: true
+  allow-build: false
+  allow-liquid-flow: false
+  lava-damage: false
+  mob-spawn: false
+  # 自动没收玻璃瓶（喝完药水产生的空瓶子，捡到也拦）
+  confiscate-glass-bottles: true
+  # 清理世界里已经存在的生物（从存档区块读出来的旧怪不会触发生成事件）
+  remove-existing-mobs: true
+  # 兜底清理间隔（秒）
+  mob-cleanup-seconds: 10
+  allow-item-drop: false
+  fall-damage: true
+  death-message: "<gray>%victim%</gray> <dark_gray>被</dark_gray> <white>%killer%</white> <dark_gray>击败了</dark_gray>"
+  death-message-unknown: "<gray>%victim%</gray> <dark_gray>阵亡了</dark_gray>"
+
+# ---------------- 击杀 / 助杀奖励 ----------------
+rewards:
+  kill:
+    coins: 5
+    exp: 5
+    golden-apples: 1
+  assist:
+    coins: 2
+    exp: 2
+  # 助杀判定窗口（秒）与最低伤害
+  assist-window-seconds: 8
+  assist-min-damage: 4.0
+
+# ---------------- 赏金 ----------------
+# 连杀达到 min-killstreak 后开始被悬赏：
+#   第一次上赏金 = base，之后每多杀一个再加 per-kill
+#   被击杀时赏金归击杀者，连杀与赏金一起清零
+bounty:
+  enabled: true
+  min-killstreak: 5
+  base: 20
+  per-kill: 10
+  announce-new: "<gold>赏金</gold> <yellow>%player%</yellow> <gray>连杀 %streak%，悬赏</gray> <gold>%bounty%</gold> <gray>硬币</gray>"
+  announce-claim: "<gold>赏金</gold> <white>%killer%</white> <gray>拿下了</gray> <white>%victim%</white> <gray>的悬赏</gray> <gold>%amount%</gold> <gray>硬币</gray>"
+
+# ---------------- 地图轮换 ----------------
+# 按 /maps list 的顺序循环；注册少于 2 张图时自动不启用
+rotation:
+  enabled: true
+  seconds: 600
+  # 提前多少秒广播提醒，0 = 不提醒
+  announce-seconds: 30
+  # ORDER = 按注册顺序轮换；VOTE = 切到票数最高的地图（玩家 /vote <地图id>）
+  mode: ORDER
+  announce: "<gray>%seconds% 秒后轮换地图…</gray>"
+  switched: "<green>地图已切换：</green><white>%map%</white> <dark_gray>(%world%)</dark_gray>"
+
+# ---------------- 等级 ----------------
+# 升至下一级所需经验 = base-exp * growth^(等级-1)
+level:
+  base-exp: 100
+  growth: 1.35
+  max-level: 50
+  format: "<gray>[</gray><gradient:#f6d365:#fda085>Lv.%level%</gradient><gray>]</gray>"
+
+# ---------------- 名字展示 ----------------
+display:
+  # 头顶 / Tab / 聊天的称号后缀格式
+  title-suffix: " <yellow>[%title%]</yellow>"
+  # 是否在头顶铭牌显示 [Lv.n]
+  # 关掉后，/tp 之类的原版反馈里也不会再出现 [Lv.n] 前缀
+  nametag-level: true
+  # 铭牌 + Tab 的刷新间隔（tick，20 = 1 秒）
+  refresh-ticks: 20
+  # 血量条：头顶铭牌和 Tab 列表都会显示
+  health:
+    enabled: true
+    # 最多显示多少个心（按最大血量换算，20 血 = 10 心）
+    max-hearts: 10
+    # %full% 是满格心，%empty% 是空槽
+    format: "<red>%full%</red><dark_gray>%empty%</dark_gray>"
+    separator: " "
+
+# ---------------- 聊天 ----------------
+chat:
+  enabled: true
+  # %message% 之前的部分是前缀，之后的部分是后缀
+  format: "%team%%display%<gray>:</gray> <white>%message%</white>"
+
+# ---------------- 商店 ----------------
+# 你给出最终道具清单后，照着这个结构继续加即可。
+shop:
+  title: "<dark_gray>杂货铺"
+  rows: 3
+  # 只有没进战场时才能打开商店
+  lobby-only: true
+  items:
+    golden_apple:
+      slot: 11
+      material: GOLDEN_APPLE
+      amount: 1
+      price: 5
+      name: "<gold>金苹果</gold>"
+      lore:
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    ender_pearl:
+      slot: 13
+      material: ENDER_PEARL
+      amount: 1
+      price: 15
+      name: "<light_purple>末影珍珠</light_purple>"
+      lore:
+        - "<gray>位移，用来追击或逃命</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    swiftness:
+      slot: 12
+      material: POTION
+      amount: 1
+      price: 8
+      potion-effect: SPEED
+      duration: 400
+      amplifier: 0
+      name: "<aqua>迅捷药水</aqua>"
+      lore:
+        - "<gray>速度 I · 20 秒</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    healing:
+      slot: 14
+      material: POTION
+      amount: 1
+      price: 10
+      potion-effect: HEAL
+      duration: 1
+      amplifier: 1
+      name: "<light_purple>治疗药水</light_purple>"
+      lore:
+        - "<gray>立即回复 4 颗心</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    strength:
+      slot: 15
+      material: POTION
+      amount: 1
+      price: 18
+      potion-effect: STRENGTH
+      duration: 160
+      amplifier: 0
+      name: "<red>力量药水</red>"
+      lore:
+        - "<gray>力量 I · 8 秒</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    quiver:
+      slot: 16
+      material: ARROW
+      amount: 1
+      price: 20
+      special: quiver
+      name: "<white>箭袋扩容</white>"
+      lore:
+        - "<gray>箭上限 +1，死亡后失效</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    # ---- 外观类商品（买完自动装备，可用 /cosmetic 切换） ----
+    cosmetic_kill_blood:
+      slot: 19
+      material: PAPER
+      amount: 1
+      price: 60
+      special: cosmetic
+      cosmetic: kill_blood
+      name: "<red>外观：撕裂播报</red>"
+      lore:
+        - "<gray>击杀时换一种播报文案</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    cosmetic_effect_totem:
+      slot: 20
+      material: PAPER
+      amount: 1
+      price: 80
+      special: cosmetic
+      cosmetic: effect_totem
+      name: "<gold>外观：不死图腾特效</gold>"
+      lore:
+        - "<gray>击杀时绽放图腾粒子</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    cosmetic_chat_gold:
+      slot: 21
+      material: PAPER
+      amount: 1
+      price: 40
+      special: cosmetic
+      cosmetic: chat_gold
+      name: "<gold>外观：金色聊天前缀</gold>"
+      lore:
+        - "<gray>聊天名字前多一个金色标记</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    cosmetic_death_soul:
+      slot: 23
+      material: PAPER
+      amount: 1
+      price: 40
+      special: cosmetic
+      cosmetic: death_soul
+      name: "<gray>外观：灵魂播报</gray>"
+      lore:
+        - "<gray>阵亡时的文案</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    cosmetic_name_gold:
+      slot: 24
+      material: NAME_TAG
+      amount: 1
+      price: 50
+      special: cosmetic
+      cosmetic: name_gold
+      name: "<gold>名字：金色</gold>"
+      lore:
+        - "<gray>Tab 与聊天里名字变金色</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    cosmetic_name_rainbow:
+      slot: 25
+      material: NAME_TAG
+      amount: 1
+      price: 120
+      special: cosmetic
+      cosmetic: name_rainbow
+      name: "<rainbow>名字：渐变</rainbow>"
+      lore:
+        - "<gray>Tab 与聊天的渐变名字</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    cosmetic_title_slayer:
+      slot: 26
+      material: NAME_TAG
+      amount: 1
+      price: 80
+      special: cosmetic
+      cosmetic: title_slayer
+      name: "<red>称号：杀戮之王</red>"
+      lore:
+        - "<gray>名字后显示 [杀戮之王]</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+    cosmetic_title_tycoon:
+      slot: 18
+      material: NAME_TAG
+      amount: 1
+      price: 60
+      special: cosmetic
+      cosmetic: title_tycoon
+      name: "<gold>称号：富可敌国</gold>"
+      lore:
+        - "<gray>名字后显示 [富可敌国]</gray>"
+        - "<gray>价格：<gold>%price%</gold> 硬币</gray>"
+
+# ---------------- 全息排行榜 ----------------
+boards:
+  update-seconds: 30
+  max-lines: 10
+  title: "<gold><bold>%board%</bold></gold>"
+  line: "<gray>%rank%.</gray> <white>%player%</white> <dark_gray>-</dark_gray> <yellow>%value%</yellow>"
+  empty-line: "<dark_gray>暂无数据</dark_gray>"
+  types:
+    kills: "击杀榜"
+    level: "等级榜"
+    coins: "硬币榜"
+    deaths: "死亡榜"
+
+# ---------------- 侧边栏记分板 ----------------
+# 玩家可以用 /sb 自己开关
+scoreboard:
+  enabled: true
+  update-seconds: 1
+  title: "<gold><bold>LiteBrawl</bold></gold>"
+  status-playing: "<green>在场</green>"
+  status-idle: "<gray>待机</gray>"
+  # 最多 15 行，空字符串会被当成空行
+  # 可用占位符：
+  #   %player% %status% %level% %exp% %coins%
+  #   %kills% %deaths% %assists% %kd% %alive% %health%
+  #   %arrows% %arrows_max% %bounty% %streak%
+  lines:
+    - "<gray>玩家 <white>%player%</white></gray>"
+    - "<gray>状态 %status%</gray>"
+    - " "
+    - "<gray>等级 <yellow>Lv.%level%</yellow> <dark_gray>(%exp% exp)</dark_gray></gray>"
+    - "<gray>硬币 <gold>%coins%</gold></gray>"
+    - " "
+    - "<gray>击杀 <white>%kills%</white> <dark_gray>·</dark_gray> 死亡 <white>%deaths%</white></gray>"
+    - "<gray>助杀 <white>%assists%</white> <dark_gray>·</dark_gray> K/D <white>%kd%</white></gray>"
+    - " "
+    - "<gray>战场 <white>%alive%</white> 人</gray>"
+  # 记分板底部（服主自定义，按顺序接在上面 lines 之后）
+  footer:
+    - " "
+    - "<dark_gray>地图 <white>%map%</white></dark_gray>"
+    - "<dark_gray>换图倒计时 <white>%countdown%</white></dark_gray>"
+
+# ---------------- Tab 列表 ----------------
+# %player% %online% %map% %countdown% %alive%
+tab:
+  enabled: true
+  update-seconds: 5
+  header: "<gradient:#7ee8fa:#80ff72><bold>LiteBrawl</bold></gradient><newline><gray>地图 <white>%map%</white> · 在线 <white>%online%</white></gray>"
+  footer: "<gray>在战场 <white>%alive%</white> 人 · 换图倒计时 <white>%countdown%</white> 秒</gray>"
+
+# ---------------- 战斗手感 ----------------
+combat:
+  # 取消攻击冷却（原版 1.9+ 的攻击间隔），拉到很高就是 1.8 手感
+  no-attack-cooldown: true
+  attack-speed: 1024.0
+  # 击退倍率：1.0 = 原版，0.5 = 击退减半，1.5 = 击退加强
+  knockback-multiplier: 1.0
+  # 战斗模式：玩家互相造成伤害后进入，期间禁止 /spawn、返回大厅、开商店
+  tag-seconds: 15
+  tag-notify: true
+  # 箭矢落地后多少秒清除（拾取一律禁止）
+  arrow-ground-seconds: 3
+
+# ---------------- 组队 ----------------
+team:
+  max-size: 8
+  invite-seconds: 60
+  gui-title: "<dark_gray>组队"
+  item:
+    material: COMPASS
+    slot: 7
+    name: "<aqua><bold>组队</bold></aqua>"
+    lore:
+      - "<gray>右键创建队伍 / 邀请队友</gray>"
+
+# ---------------- 大厅快捷栏 ----------------
+lobby-items:
+  # 打开物品商店的箱子
+  shop:
+    material: CHEST
+    slot: 6
+    name: "<gold><bold>物品商店</bold></gold>"
+  # 打开外观商城的绿宝石
+  cosmetic:
+    material: EMERALD
+    slot: 5
+    name: "<green><bold>外观商城</bold></green>"
+  # 打开设置的比较器
+  settings:
+    material: COMPARATOR
+    slot: 3
+    name: "<yellow><bold>设置</bold></yellow>"
+  # 打开个人设置的命名牌
+  personal:
+    material: NAME_TAG
+    slot: 2
+    name: "<light_purple><bold>个人设置</bold></light_purple>"
+  # 返回大厅的红石
+  return:
+    material: REDSTONE
+    slot: 4
+    name: "<red><bold>返回大厅</bold></red>"
+    # 填了服务器名就走 BungeeCord 插件消息跳服（Velocity 需开 bungee-plugin-message-channel）
+    # 留空 = 直接回到当前地图出生点
+    server: ""
+
+# ---------------- 反刷分 ----------------
+# 短时间内反复击杀同一个对手，收益递减：factor = decay^n（不低于 min-factor）
+anti-farm:
+  enabled: true
+  # 统计窗口（秒），超过这个时间没再杀同一个人就重新计数
+  window-seconds: 600
+  # 每次重复击杀的衰减系数：0.5 = 第 2 次 50%、第 3 次 25%
+  decay: 0.5
+  # 最低收益比例
+  min-factor: 0.1
+
+# ---------------- 双倍加成 ----------------
+# 三种开启方式：/lb boost start 手动、定时（/lb boost schedule）、事件触发（下面 triggers）
+boost:
+  start-message: "<gold>双倍%type%</gold> <gray>开启</gray> <dark_gray>·</dark_gray> <white>x%multiplier%</white> <gray>持续 %seconds% 秒（%scope%）</gray>"
+  end-message: "<gray>%type%加成已结束。</gray>"
+  triggers:
+    # 有人连杀达到 streak 时自动开一段
+    killstreak:
+      enabled: true
+      streak: 10
+      seconds: 300
+      multiplier: 2.0
+      once: true
+      types: [ coins, exp ]
+    # 在线人数达到 count 时自动开
+    player-count:
+      enabled: false
+      count: 8
+      seconds: 600
+      multiplier: 2.0
+      types: [ coins, exp ]
+
+# ---------------- 物品栏预设 ----------------
+# slots 里可以写 sword / bow / arrows / food，值是 0-35 的槽位
+kit-layouts:
+  default:
+    name: "默认（剑 弓 箭 食物）"
+    slots:
+      sword: 0
+      bow: 1
+      arrows: 2
+      food: 3
+  archer:
+    name: "弓箭手（弓 箭 剑 食物）"
+    slots:
+      bow: 0
+      arrows: 1
+      sword: 2
+      food: 3
+  melee:
+    name: "近战（剑 食物 箭 弓在 8）"
+    slots:
+      sword: 0
+      food: 1
+      arrows: 2
+      bow: 8
+
+# ---------------- 假人（陪练） ----------------
+bots:
+  enabled: true
+  # 在线玩家少于 min-players 时自动上假人，够了就撤掉
+  auto: true
+  min-players: 3
+  count: 4
+  # 大师的比例（百分比），剩下的都是新手
+  master-percent: 50
+  # 大师假人的攻击力（新手固定 0，打不出伤害）
+  master-damage: 4.0
+  # 假人是否静音（不播放僵尸叫声；屏蔽怪物后仍听到声音通常就是它）
+  silent: true
+  # 假人被打死后自动复活（保留大师/新手身份）
+  respawn: true
+  respawn-seconds: 5
+  reward:
+    master:
+      coins: 2
+      exp: 2
+    novice:
+      coins: 1
+      exp: 1
+
+# ---------------- 复活保护 ----------------
+protection:
+  # 进入战场后多少秒内免伤（0 = 关闭）
+  seconds: 3
+  # 保护期间是否也不允许打出伤害
+  block-dealing: true
+
+# ---------------- 热更新 ----------------
+hotfix:
+  # 启动时自动加载 plugins/LiteBrawl/HotFix/*.hotfix
+  auto-load: true
+
+# ---------------- 外观（击杀/死亡播报、特效、聊天） ----------------
+# 用特殊商品在商店出售：special: cosmetic + cosmetic: <这里的 id>
+cosmetics:
+  items:
+    kill_blood:
+      type: KILL_MESSAGE
+      name: "<red>撕裂播报</red>"
+      price: 60
+      message: "<dark_red>☠ %killer%</dark_red> <gray>撕碎了</gray> <dark_red>%victim%</dark_red>"
+    death_soul:
+      type: DEATH_MESSAGE
+      name: "<gray>灵魂播报</gray>"
+      price: 40
+      message: "<gray>%victim% 的灵魂飘走了…</gray>"
+    effect_totem:
+      type: KILL_EFFECT
+      name: "<gold>不死图腾特效</gold>"
+      price: 80
+      particle: TOTEM_OF_UNDYING
+      count: 40
+    chat_gold:
+      type: CHAT_EFFECT
+      name: "<gold>金色聊天前缀</gold>"
+      price: 40
+      prefix: "<gold>✦ </gold>"
+    # ---- 名字样式：message 是 Tab/聊天的渲染（%name% 替换成玩家名），
+    #      color 是头顶铭牌的纯色（渐变色头顶做不到，客户端限制）
+    name_gold:
+      type: NAME_STYLE
+      name: "<gold>金色名字</gold>"
+      price: 50
+      message: "<gold>%name%</gold>"
+      color: GOLD
+    name_rainbow:
+      type: NAME_STYLE
+      name: "<rainbow>渐变名字</rainbow>"
+      price: 120
+      message: "<gradient:#ff7eb3:#7afcff>%name%</gradient>"
+      color: LIGHT_PURPLE
+    # ---- 称号：显示在名字后面的 [称号]
+    title_slayer:
+      type: TITLE
+      name: "<red>称号：杀戮之王</red>"
+      price: 80
+      message: "<red>杀戮之王</red>"
+    title_tycoon:
+      type: TITLE
+      name: "<gold>称号：富可敌国</gold>"
+      price: 60
+      message: "<gold>富可敌国</gold>"
+
+# ---------------- 网页配置管理 ----------------
+# 浏览器打开 http://127.0.0.1:8787/?token=<下面的 token> 即可在线改配置
+web:
+  enabled: true
+  # 只监听本机；要外网访问改成 0.0.0.0 并自己做好防护
+  bind: 127.0.0.1
+  port: 8787
+  # 首次启动自动生成，所有 /api 请求都要带它
+  token: ""
+  # 首次启动是否自动打开浏览器
+  open-browser: true
+
+# ---------------- 数据存储 ----------------
+# type: SQLITE 或 MYSQL
+# 切换存储类型需要重启服务器
+storage:
+  type: SQLITE
+  save-interval-seconds: 300
+  mysql:
+    host: 127.0.0.1
+    port: 3306
+    database: litebrawl
+    user: root
+    password: ""
+    table: litebrawl_profiles
+    use-ssl: false
+
+# ---------------- 跨服（预留） ----------------
+# 当前版本不启用跨服跳转，只保留接口：
+#   NONE          单服模式（默认）
+#   PLUGIN_MESSAGE 预留：走 Bungee 插件消息通道跳服
+proxy:
+  # NONE = 单服；BUNGEE = 走 Bungee 插件消息跳服
+  # 用 Velocity 时需要在 velocity.toml 打开 bungee-plugin-message-channel = true
+  mode: NONE
+  # 可用服务器名（/play 不带参数时用 default，列表用于提示）
+  default: lobby
+  servers:
+    - lobby
+    - brawl1

@@ -1,0 +1,49 @@
+# ---------- 构建产物 ----------
+target/
+build/
+out/
+*.jar
+*.hotfix
+
+# ---------- 本机测试服（严禁提交） ----------
+# 内含：Paper 服务端 jar、第三方插件（ViaVersion 等）、世界存档、
+#      plugins/LiteBrawl/config.yml（有真实 web.token）、litebrawl.db（玩家数据）
+test-server/
+server/
+run/
+
+# ---------- 数据库 ----------
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ---------- 日志与运行时 ----------
+logs/
+*.log
+*.log.gz
+hs_err_pid*.log
+replay_pid*.log
+
+# ---------- IDE ----------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# ---------- 系统 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- 本机私密配置 ----------
+.env
+.env.*
+*.local.yml
+secrets.yml

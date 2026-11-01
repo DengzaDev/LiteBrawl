@@ -1,0 +1,11 @@
+id: balance-tweak
+api: 2
+description: 示例 v2 热更新：增量调赏金 + 加快补箭 + 执行动作
+requires: "1.0"
+rules:
+  bounty.base: "+15"
+  bounty.per-kill: "+5"
+  kit.arrow-regen-seconds: 3
+actions:
+  - "console:say HOTFIX_ACTION_OK"
+  - "broadcast:<gold>[热更新]</gold> <gray>平衡性调整已生效</gray>"

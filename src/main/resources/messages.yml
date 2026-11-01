@@ -1,0 +1,28 @@
+# ============================================================
+#  LiteBrawl 播报文案
+#  改完执行 /litebrawl reload 即可生效
+#
+#  可用占位符：
+#    击杀：%killer% %victim% %distance% %weapon%
+#    死亡：%victim%
+#    连杀：%player% %streak%
+# ============================================================
+
+kill:
+  default: "<white>%killer%</white> <gray>击杀</gray> <white>%victim%</white> <dark_gray>(%distance% 格 · %weapon%)</dark_gray>"
+
+death:
+  default: "<gray>%victim% 阵亡了</gray>"
+
+# 连杀播报：每 streak.every 次击杀广播一次
+streak:
+  enabled: true
+  every: 5
+  message: "<gold>%player%</gold> <gray>已经连杀</gray> <red>%streak%</red> <gray>人！</gray>"
+
+# 武器名（击杀播报里的 %weapon%）
+weapon:
+  melee: "近战"
+  bow: "弓箭"
+  potion: "药水"
+  other: "空手"
