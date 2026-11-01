@@ -40,6 +40,33 @@ jobs:
           zip -q -r "$GITHUB_WORKSPACE/target/LiteBrawl-$RELEASE_TAG.hotfix" hotfix.yml
           ls -l "$GITHUB_WORKSPACE/target"
 
+      - name: 打包测试服务器包
+        run: |
+          set -e
+          API="https://fill.papermc.io/v3/projects/paper/versions/1.21.1/builds"
+          JSON=$(curl -fsSL "$API")
+          URL=$(echo "$JSON" | jq -r '.[0].downloads["server:default"].url')
+          SHA=$(echo "$JSON" | jq -r '.[0].downloads["server:default"].checksums.sha256')
+          NAME=$(echo "$JSON" | jq -r '.[0].downloads["server:default"].name')
+          echo "使用 Paper: $NAME"
+          curl -fsSL -o "target/$NAME" "$URL"
+          echo "$SHA  target/$NAME" | sha256sum -c -
+
+          STAGE="target/test-server"
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE/plugins"
+          cp "target/$NAME" "$STAGE/paper.jar"
+          # 只取插件本体，排除 shade 插件的原始备份（否则会重复加载）
+          PLUGIN_JAR=$(ls target/LiteBrawl-*.jar | grep -v shaded | head -n1)
+          echo "使用插件: $PLUGIN_JAR"
+          cp "$PLUGIN_JAR" "$STAGE/plugins/"
+          cp -r tools/test-server-pack/. "$STAGE/"
+          chmod +x "$STAGE/start.sh"
+          echo "--- 包内容 ---"
+          ls -la "$STAGE"
+          (cd target && zip -qr "LiteBrawl-TestServer-${RELEASE_TAG}.zip" "test-server")
+          ls -lh target/*.zip
+
       - name: 提取当前版本的更新说明
         run: |
           VERSION="${RELEASE_TAG#v}"
@@ -66,3 +93,4 @@ jobs:
           files: |
             target/LiteBrawl-*.jar
             target/*.hotfix
+            target/LiteBrawl-TestServer-*.zip
