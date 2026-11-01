@@ -1,6 +1,9 @@
 # LiteBrawl
 
+<img src="assets/icon.png" alt="LiteBrawl" width="160" align="right" />
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/DengzaDev/LiteBrawl?label=release)](https://github.com/DengzaDev/LiteBrawl/releases)
 [![Paper](https://img.shields.io/badge/Paper-1.21.1-blue.svg)](https://papermc.io)
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://adoptium.net)
 
@@ -80,7 +83,14 @@
 | 编译 | JDK 21 + Maven |
 | 数据库 | SQLite（内置，默认）或 MySQL（可选） |
 
+### 下载
+
+不想自己编译的话，直接从 [Releases](https://github.com/DengzaDev/LiteBrawl/releases/latest)
+下载 `LiteBrawl-x.y.z-Release.jar`，丢进服务器的 `plugins/` 目录即可。
+
 ### 编译
+
+需要 **JDK 21** 和 Maven：
 
 ```bash
 git clone https://github.com/DengzaDev/LiteBrawl.git

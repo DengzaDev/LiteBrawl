@@ -10,6 +10,13 @@
     <packaging>jar</packaging>
     <name>LiteBrawl</name>
     <description>Small-scale brawl minigame for Paper 1.21.1</description>
+    <url>https://github.com/DengzaDev/LiteBrawl</url>
+
+    <scm>
+        <url>https://github.com/DengzaDev/LiteBrawl</url>
+        <connection>scm:git:https://github.com/DengzaDev/LiteBrawl.git</connection>
+        <developerConnection>scm:git:git@github.com:DengzaDev/LiteBrawl.git</developerConnection>
+    </scm>
 
     <licenses>
         <license>

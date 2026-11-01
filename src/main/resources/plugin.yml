@@ -3,6 +3,7 @@ version: '${project.version}'
 main: com.litebrawl.LiteBrawlPlugin
 api-version: '1.21'
 authors: [ DengzaDev ]
+website: https://github.com/DengzaDev/LiteBrawl
 description: 小型大乱斗 · 随机出生点 / 固定装备 / 组队免伤 / 赏金 / 硬币与等级 / 外观与称号 / 记分板 / 假人 / 热更新
 
 commands:

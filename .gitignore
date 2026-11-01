@@ -42,6 +42,11 @@ replay_pid*.log
 Thumbs.db
 desktop.ini
 
+# ---------- 工具临时文件 ----------
+.tmp-*
+*.tmp
+*.bak
+
 # ---------- 本机私密配置 ----------
 .env
 .env.*
