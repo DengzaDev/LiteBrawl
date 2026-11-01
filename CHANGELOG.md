@@ -50,6 +50,9 @@ auto-disable-after: 600   # 10 分钟后自动卸载并还原被覆盖的配置
 ### 发布流程
 
 - Release 说明改为只截取当前版本那一节，不再把整份 CHANGELOG 搬上页面
+- Release 附件包含 **`LiteBrawl-TestServer-<版本>.zip`**：
+  Paper 1.21.1 + 已装好的插件 + `start.bat` / `start.sh` + 离线版《快速上手》页面，
+  解压后改 `eula.txt` 就能跑（Linux / macOS 也适用）
 
 ### 升级提示
 
